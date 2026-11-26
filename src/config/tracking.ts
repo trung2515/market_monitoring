@@ -1,0 +1,52 @@
+import { readFileSync } from 'node:fs';
+import path from 'node:path';
+import { z } from 'zod';
+
+/**
+ * Cấu hình nghiệp vụ: theo dõi danh mục nào, thương hiệu nào là của khách, ai là đối thủ.
+ * Chỉnh trong config/tracking.json – không cần sửa code.
+ */
+const trackingSchema = z.object({
+  ownBrand: z.string().min(1),
+  /** Đối thủ cần tập trung. Để rỗng = coi mọi hãng khác là đối thủ. */
+  competitorBrands: z.array(z.string().min(1)).default([]),
+  categories: z
+    .array(
+      z.object({
+        /** Phần đường dẫn trên dienmayxanh.com, vd "chao-chong-dinh" */
+        slug: z.string().regex(/^[a-z0-9-]+$/, 'slug chỉ gồm chữ thường, số và dấu -'),
+        name: z.string().min(1),
+        enabled: z.boolean().default(true),
+      }),
+    )
+    .min(1),
+  segment: z
+    .object({
+      /** Giá đối thủ nằm trong ±x% giá Elmich thì coi là cùng phân khúc */
+      priceTolerancePercent: z.number().min(0).max(100).default(30),
+      maxCompetitorsPerProduct: z.number().int().min(1).max(50).default(5),
+      /** Ghép tay theo mã model: luôn đưa vào báo cáo, bất kể quy tắc tự động */
+      manualPairs: z
+        .array(z.object({ own: z.string(), competitor: z.string(), note: z.string().optional() }))
+        .default([]),
+    })
+    .default({}),
+});
+
+export type TrackingConfig = z.infer<typeof trackingSchema>;
+export type TrackedCategory = TrackingConfig['categories'][number];
+
+export function parseTrackingConfig(raw: unknown): TrackingConfig {
+  const parsed = trackingSchema.safeParse(raw);
+  if (!parsed.success) {
+    const issues = parsed.error.issues.map((i) => `  - ${i.path.join('.')}: ${i.message}`).join('\n');
+    throw new Error(`config tracking không hợp lệ:\n${issues}`);
+  }
+  return parsed.data;
+}
+
+export function loadTrackingConfig(filePath: string): TrackingConfig {
+  const abs = path.resolve(process.cwd(), filePath);
+  const json: unknown = JSON.parse(readFileSync(abs, 'utf8'));
+  return parseTrackingConfig(json);
+}

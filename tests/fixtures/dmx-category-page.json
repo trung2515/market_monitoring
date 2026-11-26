@@ -1,0 +1,67 @@
+{
+  "code": 0,
+  "messageTitle": "",
+  "message": "",
+  "errormessage": "",
+  "data": {
+    "products": [
+      {
+        "id": "233990",
+        "name": "Chảo nhôm sâu chống dính đáy từ 30 cm Elmich EDA0904GO30",
+        "avatar": "https://cdn.tgdd.vn/2026/11/timerseo/1033263001105-giadung-20261105-600x600.png",
+        "productPrices": [
+          { "id": "303_0_162", "price": 320000, "sysPrice": 639000, "discountPercent": 49, "isCanBuy": true, "inventoryStatusId": 1, "saleProgramTypeId": 0, "startDate": "2026-11-01T00:00:00", "endDate": "2026-11-30T23:59:59" },
+          { "id": "514_1_198_5020221_0", "price": 230000, "sysPrice": 639000, "discountPercent": 64, "isCanBuy": true, "inventoryStatusId": 1, "saleProgramTypeId": 1, "startDate": "2026-11-26T00:00:00", "endDate": "2026-11-26T23:59:59" },
+          { "id": "514_1_198_5038828_0", "price": 230000, "sysPrice": 639000, "discountPercent": 64, "isCanBuy": true, "inventoryStatusId": 1, "saleProgramTypeId": 1, "startDate": "2026-11-27T00:00:00", "endDate": "2026-11-27T23:59:59" }
+        ],
+        "productCode": "1033263001105",
+        "variantCode": "233990",
+        "url": "chao-chong-dinh/chao-nhom-sau-chong-dinh-day-tu-30-cm-elmich-eda0904go30",
+        "rate": 5,
+        "totalRate": 839,
+        "totalSold": "Đã bán 838",
+        "lstKeySellingPoint": [{ "label": "Đường kính 30 cm;Nhôm;Whitford Xylan;Cộng Hòa Séc;Dùng được bếp từ", "keyName": "label_ksp_osp_dmx_tgdd" }],
+        "brand": { "brandCode": "318", "brandName": "Elmich" },
+        "isOnlineOnly": true,
+        "cateName": "Chảo",
+        "categoryCode": "206"
+      },
+      {
+        "id": "221339",
+        "name": "Chảo inox nguyên khối sâu đáy từ 26 cm Sunhouse Healthy IN26M11",
+        "avatar": "https://cdn.tgdd.vn/2026/11/timerseo/1033263001073-thumb530-20261116-8721577c.jpg",
+        "productPrices": [
+          { "id": "302_0_2", "price": 450000, "sysPrice": 615000, "discountPercent": 26, "isCanBuy": true, "inventoryStatusId": 1, "saleProgramTypeId": 0, "startDate": "2026-11-01T00:00:00", "endDate": "2026-11-30T23:59:59" }
+        ],
+        "productCode": "1033263001073",
+        "url": "chao-chong-dinh/chao-inox-nguyen-khoi-sau-day-tu-26-cm-sunhouse-healthy-in26m11",
+        "rate": 4.9,
+        "totalRate": 25211,
+        "totalSold": "Đã bán 25,2k",
+        "lstKeySellingPoint": [{ "label": "Đường kính 26 cm;Inox 304;Việt Nam;Dùng được bếp từ" }],
+        "brand": { "brandName": "Sunhouse" },
+        "isOnlineOnly": false
+      },
+      {
+        "id": "137798",
+        "name": "Chảo nhôm chống dính đáy từ 28 cm Tefal Flavor Force E2770674",
+        "productPrices": [
+          { "id": "302_0_2", "price": 520000, "sysPrice": 711000, "discountPercent": 26, "isCanBuy": true, "inventoryStatusId": 1, "saleProgramTypeId": 0 }
+        ],
+        "productCode": "1033263000991",
+        "url": "chao-chong-dinh/chao-nhom-chong-dinh-day-tu-28-cm-tefal-flavor-force-e2770674",
+        "rate": 5,
+        "totalRate": 43248,
+        "totalSold": "Đã bán 43,2k",
+        "lstKeySellingPoint": [{ "label": "Đường kính 28 cm;Nhôm;Titanium;Pháp;Dùng được bếp từ" }],
+        "brand": { "brandName": "Tefal" }
+      },
+      { "id": "broken", "name": "Sản phẩm thiếu productCode để kiểm tra bỏ qua dữ liệu lỗi" }
+    ],
+    "cateId": "",
+    "cateName": "Chảo",
+    "totalProduct": 4,
+    "remainingQuantity": 0,
+    "isHiddenFilter": false
+  }
+}

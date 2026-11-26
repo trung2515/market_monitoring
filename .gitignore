@@ -1,0 +1,33 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+*.tsbuildinfo
+
+# Dữ liệu & báo cáo sinh ra khi chạy (không commit)
+data/
+reports/
+*.db
+*.db-shm
+*.db-wal
+*.sqlite
+
+# Biến môi trường chứa mật khẩu – chỉ commit file mẫu
+.env
+.env.*
+!.env.example
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Test coverage
+coverage/
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

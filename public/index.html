@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="vi">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Market Monitoring – Điện Máy Xanh</title>
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <header class="topbar">
+      <h1>Theo dõi thị trường <span>Điện Máy Xanh</span></h1>
+      <div id="status" class="status">Đang tải trạng thái…</div>
+    </header>
+
+    <main class="layout">
+      <section class="card">
+        <h2>Xuất báo cáo Excel</h2>
+        <form id="export-form">
+          <fieldset class="period">
+            <legend>Kỳ báo cáo</legend>
+            <label><input type="radio" name="period" value="week" checked /> Theo tuần</label>
+            <label><input type="radio" name="period" value="month" /> Theo tháng</label>
+            <label><input type="radio" name="period" value="custom" /> Tuỳ chọn</label>
+          </fieldset>
+
+          <div class="row" data-show="week month">
+            <label>Chọn 1 ngày bất kỳ trong kỳ
+              <input type="date" name="date" />
+            </label>
+            <small id="period-hint" class="hint"></small>
+          </div>
+          <div class="row" data-show="custom" hidden>
+            <label>Từ ngày <input type="date" name="from" /></label>
+            <label>Đến ngày <input type="date" name="to" /></label>
+          </div>
+
+          <details open>
+            <summary>Danh mục <small>(không chọn = tất cả)</small></summary>
+            <div id="categories" class="checks"></div>
+          </details>
+          <details>
+            <summary>Thương hiệu <small>(không chọn = tất cả)</small></summary>
+            <div class="quick">
+              <button type="button" data-brands="focus">Khách hàng + đối thủ chính</button>
+              <button type="button" data-brands="none">Bỏ chọn</button>
+            </div>
+            <div id="brands" class="checks"></div>
+          </details>
+
+          <div class="actions">
+            <button type="submit" class="primary" id="export-btn">⬇ Xuất Excel</button>
+          </div>
+          <p id="export-msg" class="msg"></p>
+        </form>
+      </section>
+
+      <section class="card">
+        <h2>Dữ liệu</h2>
+        <p>Hệ thống tự cào hằng ngày theo lịch. Cần số liệu mới ngay thì bấm nút dưới.</p>
+        <button id="crawl-btn" class="secondary">⟳ Cào dữ liệu ngay</button>
+        <p id="crawl-msg" class="msg"></p>
+        <h3>Lần cào gần đây</h3>
+        <table class="runs">
+          <thead><tr><th>Ngày</th><th>Kiểu</th><th>Trạng thái</th><th>Số SP</th><th>Ghi chú</th></tr></thead>
+          <tbody id="runs"></tbody>
+        </table>
+      </section>
+
+      <section class="card wide">
+        <div class="preview-head">
+          <h2>Xem nhanh bảng giá mới nhất <small id="preview-date"></small></h2>
+          <input id="search" type="search" placeholder="Tìm theo tên / mã model…" />
+        </div>
+        <div class="table-wrap">
+          <table class="preview">
+            <thead>
+              <tr>
+                <th>Danh mục</th><th>Hãng</th><th>Mã model</th><th>Tên sản phẩm</th>
+                <th class="num">Giá niêm yết</th><th class="num">Giá bán</th><th class="num">% giảm</th>
+                <th class="num">Flash sale</th><th>Đã bán</th>
+              </tr>
+            </thead>
+            <tbody id="preview"></tbody>
+          </table>
+        </div>
+      </section>
+    </main>
+
+    <script src="app.js"></script>
+  </body>
+</html>
