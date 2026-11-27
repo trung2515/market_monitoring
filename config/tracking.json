@@ -30,10 +30,6 @@
       "name": "Bình đun siêu tốc"
     },
     {
-      "slug": "binh-dung-nuoc",
-      "name": "Bình đựng nước"
-    },
-    {
       "slug": "binh-ly-giu-nhiet",
       "name": "Bình, ly giữ nhiệt"
     },
@@ -44,10 +40,6 @@
     {
       "slug": "dao-lam-bep",
       "name": "Dao làm bếp"
-    },
-    {
-      "slug": "hop-dung-thuc-pham",
-      "name": "Hộp đựng thực phẩm"
     },
     {
       "slug": "lau-dien",
@@ -96,10 +88,6 @@
     {
       "slug": "noi-nau-cham",
       "name": "Nồi nấu chậm"
-    },
-    {
-      "slug": "thot",
-      "name": "Thớt"
     }
   ],
   "segment": {
