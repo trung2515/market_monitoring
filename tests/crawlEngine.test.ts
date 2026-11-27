@@ -29,7 +29,7 @@ function setup(driver: SqlDriver) {
     calls++;
     const body = JSON.parse(String(init?.body)) as { urlCate: string };
     const json =
-      body.urlCate === 'chao-chong-dinh'
+      body.urlCate === 'chao-chong-dinh' || body.urlCate === 'noi-com-dien'
         ? fixture
         : JSON.stringify({ code: 80000, message: 'Không tìm thấy CateCode từ Url khi gọi BE', data: null });
     return new Response(json, { status: 200 });
@@ -45,7 +45,7 @@ function setup(driver: SqlDriver) {
     fetchImpl,
   });
   const engine = new CrawlEngine({ store, client, tracking, timeZone: 'Asia/Ho_Chi_Minh', logger: silentLogger });
-  return { store, engine, calls: () => calls };
+  return { store, engine, client, calls: () => calls };
 }
 
 for (const [label, makeDriver] of [
@@ -88,9 +88,9 @@ for (const [label, makeDriver] of [
     });
 
     it('API báo cáo trả dữ liệu theo ngày', async () => {
-      const { store, engine } = setup(makeDriver());
+      const { store, engine, client } = setup(makeDriver());
       const run = await engine.runToCompletion('cli', 0);
-      const api = createApi({ store, engine, tracking });
+      const api = createApi({ store, engine, client, tracking });
       const q = (s: string) => new URLSearchParams(s);
 
       const dates = await routeApi(api, 'GET', '/api/report/dates', q(`from=2000-01-01&to=2999-01-01`));
@@ -100,6 +100,47 @@ for (const [label, makeDriver] of [
       const products = await routeApi(api, 'GET', '/api/report/products', q(''));
       assert.equal((products?.body as { products: unknown[] }).products.length, 3);
       assert.equal((await routeApi(api, 'GET', '/api/khong-co', q('')))?.status, 404);
+    });
+
+    it('quản lý danh mục theo dõi trên web', async () => {
+      const { store, engine, client, calls } = setup(makeDriver());
+      const api = createApi({ store, engine, client, tracking });
+      const call = (method: string, path: string, query = '') => routeApi(api, method, path, new URLSearchParams(query));
+      const list = async () =>
+        ((await call('GET', '/api/categories'))?.body as { categories: { slug: string; enabled: boolean }[] })
+          .categories;
+
+      // Lần đầu: nạp từ config
+      assert.deepEqual(
+        (await list()).map((c) => c.slug),
+        ['chao-chong-dinh', 'slug-sai'],
+      );
+
+      // Thêm bằng link ĐMX
+      const added = await call('POST', '/api/categories', 'url=https://www.dienmayxanh.com/noi-com-dien?sort=1');
+      assert.equal(added?.status, 200);
+      assert.equal((await list()).at(-1)?.slug, 'noi-com-dien');
+      assert.equal((await call('POST', '/api/categories', 'url=https://google.com/abc'))?.status, 400);
+      assert.equal((await call('POST', '/api/categories', 'url=khong-ton-tai'))?.status, 400);
+
+      // Ngừng theo dõi → lượt cào chỉ lấy danh mục còn bật
+      await call('POST', '/api/categories/update', 'slug=slug-sai&enabled=0');
+      await call('POST', '/api/categories/update', 'slug=noi-com-dien&enabled=0');
+      const before = calls();
+      const run = await engine.runToCompletion('cli', 0);
+      assert.equal(calls() - before, 1);
+      assert.equal(run.status, 'success');
+
+      // Có dữ liệu thì không xoá được; chưa có dữ liệu thì xoá được
+      assert.equal((await call('POST', '/api/categories/delete', 'slug=chao-chong-dinh'))?.status, 409);
+      assert.equal((await call('POST', '/api/categories/delete', 'slug=slug-sai'))?.status, 200);
+      assert.deepEqual(
+        (await list()).map((c) => [c.slug, c.enabled]),
+        [
+          ['chao-chong-dinh', true],
+          ['noi-com-dien', false],
+        ],
+      );
     });
   });
 }

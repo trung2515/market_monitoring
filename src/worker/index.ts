@@ -50,7 +50,7 @@ function createServices(env: Env) {
     logger: logger.child('dmx'),
   });
   const engine = new CrawlEngine({ store, client, tracking: tracking(), timeZone, logger: logger.child('crawl') });
-  return { store, engine, logger, timeZone, api: createApi({ store, engine, tracking: tracking() }) };
+  return { store, engine, logger, timeZone, api: createApi({ store, engine, client, tracking: tracking() }) };
 }
 
 export default {

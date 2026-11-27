@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
+import { parseCategorySlug } from '../src/config/categories';
 import { extractModelCode, extractSize, isProductSet, parseSoldText } from '../src/utils/text';
 
 describe('parseSoldText', () => {
@@ -47,5 +48,16 @@ describe('isProductSet', () => {
   it('nhận diện bộ / combo', () => {
     assert.equal(isProductSet('Bộ 3 nồi inox'), true);
     assert.equal(isProductSet('Chảo inox'), false);
+  });
+});
+
+describe('parseCategorySlug', () => {
+  it('lấy slug từ link ĐMX hoặc slug gõ tay', () => {
+    assert.equal(parseCategorySlug('https://www.dienmayxanh.com/noi-com-dien?sort=1'), 'noi-com-dien');
+    assert.equal(parseCategorySlug('dienmayxanh.com/noi-com-dien/elmich'), 'noi-com-dien');
+    assert.equal(parseCategorySlug(' Noi-Com-Dien '), 'noi-com-dien');
+    assert.equal(parseCategorySlug('https://google.com/noi'), null);
+    assert.equal(parseCategorySlug('nồi cơm'), null);
+    assert.equal(parseCategorySlug(''), null);
   });
 });

@@ -1,4 +1,4 @@
-// Giao diện web – HTML/JS thuần, không cần build. Gọi các API trong src/web/routes/api.ts
+// Giao diện web – HTML/JS thuần, không cần build. Gọi các API trong src/api/handlers.ts
 (() => {
   const $ = (sel) => document.querySelector(sel);
   const form = $('#export-form');
@@ -67,7 +67,9 @@
     const o = (state.options = await (await api('/api/options')).json());
     const own = o.ownBrand.toLowerCase();
 
-    $('#categories').innerHTML = o.categories.map((c) => chip(c.slug, c.name)).join('');
+    $('#categories').innerHTML = o.categories
+      .map((c) => chip(c.slug, c.name, c.enabled === false ? ' <small>(ngừng)</small>' : '', c.enabled === false ? 'off' : ''))
+      .join('');
     $('#brands').innerHTML =
       o.brands
         .map((b) =>
@@ -244,6 +246,82 @@
     updatePeriodUi();
   }
 
+  // ---------- Danh mục theo dõi ----------
+  async function loadCategories() {
+    const { categories } = await (await api('/api/categories')).json();
+    $('#cat-list').innerHTML =
+      categories
+        .map((c) => {
+          const meta = [
+            c.slug,
+            c.productCount ? `${c.productCount.toLocaleString('vi-VN')} SP` : 'chưa có dữ liệu',
+            c.lastDate ? `dữ liệu đến ${isoDm(c.lastDate)}` : '',
+            c.enabled ? '' : 'đã ngừng theo dõi',
+          ].filter(Boolean);
+          return `<li class="${c.enabled ? '' : 'off'}" data-slug="${escapeHtml(c.slug)}" data-name="${escapeHtml(c.name)}">
+            <span class="cat-info">
+              <span class="cat-name">${escapeHtml(c.name)}</span>
+              <span class="cat-meta">${escapeHtml(meta.join(' · '))}</span>
+            </span>
+            <span class="cat-actions">
+              <button type="button" class="link-btn" data-action="${c.enabled ? 'disable' : 'enable'}">${c.enabled ? 'Ngừng theo dõi' : 'Theo dõi lại'}</button>
+              ${c.productCount ? '' : '<button type="button" class="link-btn danger" data-action="delete">Xoá</button>'}
+            </span>
+          </li>`;
+        })
+        .join('') || '<li><span class="note">Chưa có danh mục nào.</span></li>';
+  }
+
+  const refreshAfterCategoryChange = () => Promise.all([loadCategories(), loadOptions()]).catch(() => {});
+
+  $('#cat-form').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const input = $('#cat-url');
+    const btn = $('#cat-add-btn');
+    const msg = $('#cat-msg');
+    setBusy(btn, true, 'Đang kiểm tra…');
+    setMsg(msg, '');
+    try {
+      const res = await (
+        await api(`/api/categories?url=${encodeURIComponent(input.value.trim())}`, { method: 'POST' })
+      ).json();
+      setMsg(msg, `Đã thêm "${res.name}" (${res.totalProducts.toLocaleString('vi-VN')} sản phẩm trên ĐMX).`, 'ok');
+      input.value = '';
+      await refreshAfterCategoryChange();
+    } catch (err) {
+      setMsg(msg, err.message, 'err');
+    } finally {
+      setBusy(btn, false, 'Thêm danh mục');
+    }
+  });
+
+  $('#cat-list').addEventListener('click', async (e) => {
+    const btn = e.target.closest('button[data-action]');
+    if (!btn) return;
+    const li = btn.closest('li');
+    const { slug, name } = li.dataset;
+    const action = btn.dataset.action;
+    const msg = $('#cat-msg');
+    if (action === 'delete' && !confirm(`Xoá danh mục "${name}" khỏi danh sách theo dõi?`)) return;
+    btn.disabled = true;
+    try {
+      const path =
+        action === 'delete'
+          ? `/api/categories/delete?slug=${encodeURIComponent(slug)}`
+          : `/api/categories/update?slug=${encodeURIComponent(slug)}&enabled=${action === 'enable' ? 1 : 0}`;
+      await api(path, { method: 'POST' });
+      setMsg(
+        msg,
+        action === 'delete' ? `Đã xoá "${name}".` : action === 'enable' ? `Đã theo dõi lại "${name}".` : `Đã ngừng theo dõi "${name}".`,
+        'ok',
+      );
+      await refreshAfterCategoryChange();
+    } catch (err) {
+      setMsg(msg, err.message, 'err');
+      btn.disabled = false;
+    }
+  });
+
   $('#runs').addEventListener('click', async (e) => {
     const btn = e.target.closest('.copy-note');
     if (!btn) return;
@@ -284,7 +362,7 @@
     } finally {
       crawling = false;
       setBusy(btn, false, 'Lấy data hôm nay');
-      await Promise.all([loadStatus(), loadOptions(), loadPreview()]).catch(() => {});
+      await Promise.all([loadStatus(), loadOptions(), loadPreview(), loadCategories()]).catch(() => {});
     }
   });
 
@@ -351,6 +429,6 @@
   form.date.value = today;
   updatePeriodUi();
   loadOptions()
-    .then(() => Promise.all([loadStatus(), loadPreview()]))
+    .then(() => Promise.all([loadStatus(), loadPreview(), loadCategories()]))
     .catch((err) => setMsg($('#export-msg'), err.message, 'err'));
 })();

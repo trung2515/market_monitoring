@@ -1,3 +1,4 @@
+import { withStoredCategories } from '../config/categories';
 import type { TrackingConfig } from '../config/tracking';
 import type { SqlStore } from '../db/sqlStore';
 import type { CrawlRun, CrawlStatus, CrawlTrigger } from '../domain/types';
@@ -71,9 +72,10 @@ export class CrawlEngine {
     const running = await store.runningRun();
     if (running) return { run: running, created: false };
 
+    const categories = (await withStoredCategories(store, tracking)).categories.filter((c) => c.enabled);
+    if (categories.length === 0) throw new Error('Chưa có danh mục nào được theo dõi. Hãy thêm danh mục trên web.');
     const crawlDate = todayInTimeZone(timeZone);
     const runId = await store.createRun(crawlDate, trigger);
-    const categories = tracking.categories.filter((c) => c.enabled);
     await store.addJobs(
       runId,
       categories.map((c) => ({ categorySlug: c.slug, categoryName: c.name, pageIndex: 0 })),
@@ -86,7 +88,7 @@ export class CrawlEngine {
 
   /** Xử lý 1 trang. Gọi lặp lại tới khi `finished`. */
   async step(): Promise<StepResult> {
-    const { store, client, tracking, logger } = this.deps;
+    const { store, client, logger } = this.deps;
     const job = await store.claimNextJob(new Date(Date.now() - this.staleJobMs).toISOString());
 
     if (!job) {
@@ -103,10 +105,7 @@ export class CrawlEngine {
 
     const run = await store.getRun(job.runId);
     if (!run) throw new Error(`Không tìm thấy lượt cào #${job.runId}`);
-    const category = tracking.categories.find((c) => c.slug === job.categorySlug) ?? {
-      slug: job.categorySlug,
-      name: job.categoryName,
-    };
+    const category = { slug: job.categorySlug, name: job.categoryName };
 
     try {
       const page = await client.fetchPage(job.categorySlug, job.pageIndex);
@@ -171,7 +170,8 @@ export class CrawlEngine {
     const previousDate = await store.latestDateBefore(run.crawlDate);
     if (previousDate) {
       const [prev, curr] = await Promise.all([store.categoryCounts(previousDate), store.categoryCounts(run.crawlDate)]);
-      for (const c of this.deps.tracking.categories) {
+      const { categories } = await withStoredCategories(store, this.deps.tracking);
+      for (const c of categories.filter((x) => x.enabled)) {
         const before = prev.get(c.slug);
         const now = curr.get(c.slug) ?? 0;
         if (before && now < before * DROP_WARNING_RATIO) {

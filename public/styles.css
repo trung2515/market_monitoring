@@ -107,7 +107,8 @@ select {
   grid-template-columns: minmax(0, 7fr) minmax(0, 4fr);
   grid-template-areas:
     'export data'
-    'table table';
+    'table table'
+    'cats cats';
   gap: 20px;
   padding: 24px clamp(16px, 4vw, 40px) 48px;
   max-width: 1360px;
@@ -129,6 +130,70 @@ select {
 }
 .panel-table {
   grid-area: table;
+}
+.panel-cats {
+  grid-area: cats;
+}
+
+/* ---------- Danh mục theo dõi ---------- */
+.cat-form {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+.cat-form input {
+  flex: 1;
+  min-width: 0;
+}
+.cat-form .btn {
+  flex: none;
+}
+.cat-list {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  border-top: 1px solid var(--line);
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  column-gap: 24px;
+}
+.cat-list li {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+  font-size: 13.5px;
+}
+.cat-list .cat-info {
+  flex: 1;
+  min-width: 0;
+}
+.cat-list .cat-name {
+  font-weight: 600;
+}
+.cat-list .cat-meta {
+  display: block;
+  color: var(--muted);
+  font-size: 12.5px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.cat-list li.off .cat-name {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+.cat-list .cat-actions {
+  display: flex;
+  gap: 10px;
+  flex: none;
+}
+.cat-list .link-btn.danger {
+  color: var(--danger);
+}
+.chip.off span {
+  color: var(--muted);
 }
 .panel-title {
   font-size: 17px;
@@ -681,7 +746,7 @@ select:hover {
 @media (max-width: 960px) {
   .layout {
     grid-template-columns: minmax(0, 1fr);
-    grid-template-areas: 'export' 'data' 'table';
+    grid-template-areas: 'export' 'data' 'table' 'cats';
   }
 }
 @media (max-width: 560px) {

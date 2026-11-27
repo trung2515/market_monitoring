@@ -103,4 +103,17 @@ export const migrations: { id: number; name: string; sql: string }[] = [
       CREATE INDEX idx_crawl_jobs_status ON crawl_jobs(status, id);
     `,
   },
+  {
+    id: 5,
+    name: 'categories',
+    sql: `
+      CREATE TABLE categories (
+        slug        TEXT PRIMARY KEY,
+        name        TEXT NOT NULL,
+        enabled     INTEGER NOT NULL DEFAULT 1,
+        sort_order  INTEGER NOT NULL DEFAULT 0,
+        created_at  TEXT NOT NULL
+      );
+    `,
+  },
 ];

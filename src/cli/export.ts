@@ -1,6 +1,7 @@
 import { mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { parseArgs } from 'node:util';
+import { withStoredCategories } from '../config/categories';
 import { createContext } from '../container';
 import { buildWorkbook } from '../report/excel/workbook';
 import type { PeriodType } from '../report/period';
@@ -41,7 +42,7 @@ async function main(): Promise<void> {
   try {
     const data = await buildReportData(
       ctx.store,
-      ctx.tracking,
+      await withStoredCategories(ctx.store, ctx.tracking),
       {
         type: values.period as PeriodType,
         date: values.date,

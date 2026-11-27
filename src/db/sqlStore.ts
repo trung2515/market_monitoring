@@ -31,6 +31,14 @@ export interface JobSummary {
   invalidByCategory: { categoryName: string; invalid: number }[];
 }
 
+/** Danh mục đang theo dõi (quản lý trên web, lưu trong bảng categories). */
+export interface StoredCategory {
+  slug: string;
+  name: string;
+  enabled: boolean;
+  sortOrder: number;
+}
+
 /** Ánh xạ trường PriceSnapshot ↔ cột price_snapshots. Thêm trường: thêm 1 dòng + 1 migration. */
 const SNAPSHOT_COLUMNS: [keyof PriceSnapshot, string][] = [
   ['crawlDate', 'crawl_date'],
@@ -340,6 +348,56 @@ export class SqlStore {
 
   async productCount(): Promise<number> {
     return num((await this.db.first('SELECT COUNT(*) AS c FROM products'))?.c);
+  }
+
+  // ----- Danh mục theo dõi -----
+
+  async categories(): Promise<StoredCategory[]> {
+    return (await this.db.all('SELECT slug, name, enabled, sort_order FROM categories ORDER BY sort_order, created_at')).map(
+      (r) => ({ slug: str(r.slug), name: str(r.name), enabled: bool(r.enabled), sortOrder: num(r.sort_order) }),
+    );
+  }
+
+  /** Lần đầu chạy (bảng còn trống) → nạp danh sách từ config/tracking.json. Sau đó quản lý trên web. */
+  async seedCategories(list: { slug: string; name: string; enabled: boolean }[]): Promise<void> {
+    if (num((await this.db.first('SELECT COUNT(*) AS c FROM categories'))?.c) > 0) return;
+    const now = new Date().toISOString();
+    await this.db.batch(
+      list.map((c, i) => ({
+        sql: 'INSERT OR IGNORE INTO categories (slug, name, enabled, sort_order, created_at) VALUES (?, ?, ?, ?, ?)',
+        params: [c.slug, c.name, c.enabled ? 1 : 0, i, now],
+      })),
+    );
+  }
+
+  async addCategory(slug: string, name: string): Promise<void> {
+    await this.db.run(
+      `INSERT INTO categories (slug, name, enabled, sort_order, created_at)
+       VALUES (?1, ?2, 1, (SELECT COALESCE(MAX(sort_order), -1) + 1 FROM categories), ?3)
+       ON CONFLICT(slug) DO UPDATE SET enabled = 1`,
+      [slug, name, new Date().toISOString()],
+    );
+  }
+
+  async updateCategory(slug: string, change: { enabled?: boolean; name?: string }): Promise<boolean> {
+    const res = await this.db.run(
+      'UPDATE categories SET enabled = COALESCE(?2, enabled), name = COALESCE(?3, name) WHERE slug = ?1',
+      [slug, change.enabled === undefined ? null : change.enabled ? 1 : 0, change.name ?? null],
+    );
+    return res.changes > 0;
+  }
+
+  async deleteCategory(slug: string): Promise<boolean> {
+    return (await this.db.run('DELETE FROM categories WHERE slug = ?', [slug])).changes > 0;
+  }
+
+  /** Số SP đã lưu + ngày có dữ liệu gần nhất của từng danh mục. */
+  async categoryStats(): Promise<Map<string, { productCount: number; lastDate: string | null }>> {
+    const rows = await this.db.all(
+      `SELECT p.category_slug, COUNT(*) AS c, MAX(p.last_seen_date) AS last
+       FROM products p GROUP BY p.category_slug`,
+    );
+    return new Map(rows.map((r) => [str(r.category_slug), { productCount: num(r.c), lastDate: strOrNull(r.last) }]));
   }
 
   async brands(): Promise<{ brand: string; productCount: number }[]> {

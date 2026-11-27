@@ -1,6 +1,8 @@
 import { z } from 'zod';
+import { parseCategorySlug, withStoredCategories } from '../config/categories';
 import type { TrackingConfig } from '../config/tracking';
 import type { CrawlEngine } from '../crawler/crawlEngine';
+import type { DmxClient } from '../crawler/dmx/client';
 import type { ProductFilter } from '../db/rowMappers';
 import type { SqlStore } from '../db/sqlStore';
 import type { CrawlTrigger } from '../domain/types';
@@ -23,6 +25,8 @@ export class HttpError extends Error {
 export interface ApiDeps {
   store: SqlStore;
   engine: CrawlEngine;
+  /** Dùng để kiểm tra link danh mục khi thêm mới */
+  client: DmxClient;
   tracking: TrackingConfig;
 }
 
@@ -46,6 +50,12 @@ const productsQuery = filterQuery.extend({
 });
 const rangeQuery = z.object({ from: dateParam, to: dateParam });
 const dateQuery = z.object({ date: dateParam });
+const slugQuery = z.object({ slug: z.string().regex(/^[a-z0-9-]+$/, 'Slug không hợp lệ') });
+const addCategoryQuery = z.object({ url: z.string().min(1, 'Hãy dán link danh mục').max(300) });
+const updateCategoryQuery = slugQuery.extend({
+  enabled: z.enum(['0', '1']).optional(),
+  name: z.string().trim().min(1).max(80).optional(),
+});
 
 function parse<T extends z.ZodTypeAny>(schema: T, query: URLSearchParams): z.infer<T> {
   const result = schema.safeParse(Object.fromEntries(query));
@@ -65,7 +75,8 @@ function compact<T extends object>(obj: T): Partial<T> {
   return out as Partial<T>;
 }
 
-export function createApi({ store, engine, tracking }: ApiDeps) {
+export function createApi({ store, engine, client, tracking: baseTracking }: ApiDeps) {
+  const tracking = () => withStoredCategories(store, baseTracking);
   return {
     /** Trạng thái: lần cào gần nhất, tiến độ lượt đang chạy, số liệu tổng quát. */
     async status() {
@@ -90,13 +101,67 @@ export function createApi({ store, engine, tracking }: ApiDeps) {
 
     /** Dữ liệu cho bộ lọc + cấu hình báo cáo (trình duyệt cần để tự tạo file Excel). */
     async options() {
+      const [config, brands] = await Promise.all([tracking(), store.brands()]);
       return {
-        ownBrand: tracking.ownBrand,
-        competitorBrands: tracking.competitorBrands,
-        categories: tracking.categories.filter((c) => c.enabled).map((c) => ({ slug: c.slug, name: c.name })),
-        brands: await store.brands(),
-        tracking,
+        ownBrand: config.ownBrand,
+        competitorBrands: config.competitorBrands,
+        categories: config.categories.map((c) => ({ slug: c.slug, name: c.name, enabled: c.enabled })),
+        brands,
+        tracking: config,
       };
+    },
+
+    // ----- Danh mục theo dõi -----
+
+    async categories() {
+      const [{ categories: list }, stats] = await Promise.all([tracking(), store.categoryStats()]);
+      return {
+        categories: list.map((c) => ({
+          ...c,
+          productCount: stats.get(c.slug)?.productCount ?? 0,
+          lastDate: stats.get(c.slug)?.lastDate ?? null,
+        })),
+      };
+    },
+
+    /** Thêm danh mục từ link ĐMX: gọi thử ĐMX để chắc link đúng và lấy tên danh mục. */
+    async addCategory(query: URLSearchParams) {
+      await tracking(); // nạp danh sách ban đầu nếu chưa có
+      const { url } = parse(addCategoryQuery, query);
+      const slug = parseCategorySlug(url);
+      if (!slug) throw new HttpError(400, 'Link không đúng. Hãy dán link danh mục dạng https://www.dienmayxanh.com/noi-com-dien');
+      let page;
+      try {
+        page = await client.fetchPage(slug, 0);
+      } catch (err) {
+        throw new HttpError(400, `Không tìm thấy danh mục "${slug}" trên Điện Máy Xanh (${(err as Error).message})`);
+      }
+      if (page.rawCount === 0) throw new HttpError(400, `Danh mục "${slug}" không có sản phẩm nào trên Điện Máy Xanh`);
+      const name = page.categoryName || slug;
+      await store.addCategory(slug, name);
+      return { slug, name, totalProducts: page.totalReported };
+    },
+
+    /** Ngừng / theo dõi lại (enabled=0|1) hoặc đổi tên hiển thị. */
+    async updateCategory(query: URLSearchParams) {
+      const q = parse(updateCategoryQuery, query);
+      const ok = await store.updateCategory(q.slug, {
+        enabled: q.enabled === undefined ? undefined : q.enabled === '1',
+        name: q.name,
+      });
+      if (!ok) throw new HttpError(404, 'Không tìm thấy danh mục');
+      return { ok: true };
+    },
+
+    /** Chỉ xoá được danh mục CHƯA có dữ liệu (thêm nhầm). Đã có dữ liệu thì dùng "Ngừng theo dõi". */
+    async deleteCategory(query: URLSearchParams) {
+      const { slug } = parse(slugQuery, query);
+      const stats = await store.categoryStats();
+      if ((stats.get(slug)?.productCount ?? 0) > 0) {
+        throw new HttpError(409, 'Danh mục đã có dữ liệu nên không xoá được. Hãy bấm "Ngừng theo dõi" để giữ lại lịch sử.');
+      }
+      if (!(await store.deleteCategory(slug))) throw new HttpError(404, 'Không tìm thấy danh mục');
+      return { ok: true };
     },
 
     /** Bảng giá mới nhất (bảng xem nhanh trên web). */
@@ -164,6 +229,10 @@ export async function routeApi(
     'GET /api/report/dates': () => api.reportDates(query),
     'GET /api/report/products': () => api.reportProducts(),
     'GET /api/report/snapshots': () => api.reportSnapshots(query),
+    'GET /api/categories': () => api.categories(),
+    'POST /api/categories': () => api.addCategory(query),
+    'POST /api/categories/update': () => api.updateCategory(query),
+    'POST /api/categories/delete': () => api.deleteCategory(query),
     'POST /api/crawl': () => api.crawlStart('manual'),
     'POST /api/crawl/step': () => api.crawlStep(),
   };

@@ -49,28 +49,31 @@ Nút **Lấy data hôm nay** chỉ cần bấm khi muốn có giá mới nhất 
 
 **Màu sắc:** nền xanh lá nhạt là sản phẩm Elmich. Nền cam nhạt là chỗ cần chú ý, ví dụ sản phẩm Elmich chưa có đối thủ cùng tầm giá.
 
-## 3. Đổi danh mục, đối thủ, giờ chạy
+## 3. Thêm, ngừng theo dõi danh mục
+
+Làm ngay trên web, ở mục **Danh mục theo dõi** (cuối trang). Không cần sửa code, không cần deploy.
+
+- **Thêm:** mở danh mục trên dienmayxanh.com, copy link (ví dụ `https://www.dienmayxanh.com/noi-com-dien`), dán vào ô rồi bấm **Thêm danh mục**. Hệ thống tự kiểm tra link và lấy tên danh mục. Dữ liệu bắt đầu có từ lần lấy kế tiếp.
+- **Ngừng theo dõi:** khi không kinh doanh hoặc không cần theo dõi nữa. Hệ thống thôi lấy dữ liệu mới nhưng **vẫn giữ lịch sử**, vẫn xuất Excel được các kỳ cũ. Bấm **Theo dõi lại** lúc nào cũng được.
+- **Xoá:** chỉ dùng cho danh mục chưa có dữ liệu (ví dụ thêm nhầm).
+
+## 4. Đổi đối thủ, giờ chạy
 
 | Muốn đổi                                   | Sửa ở đâu                                                                                       |
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
-| Thêm / bớt danh mục, đối thủ               | `config/tracking.json`                                                                          |
+| Danh sách đối thủ chính                    | `config/tracking.json` → `competitorBrands`                                                     |
 | Khoảng giá "cùng tầm giá" (mặc định ±20%) | `config/tracking.json` → `segment.priceTolerancePercent`                                        |
 | Giờ tự lấy dữ liệu trên Cloudflare        | `wrangler.jsonc` (mục `crons`) **và** `DAILY_CRON` trong `src/worker/index.ts`. Giờ ghi theo UTC = giờ VN − 7 |
 
-**Thêm danh mục mới:** mở danh mục trên dienmayxanh.com, ví dụ `https://www.dienmayxanh.com/binh-ly-giu-nhiet`, lấy phần cuối `binh-ly-giu-nhiet` làm `slug`:
+Sửa xong thì deploy lại (mục 5). Mục `categories` trong `config/tracking.json` chỉ dùng để tạo danh sách ban đầu ở lần chạy đầu tiên; sau đó danh mục được quản lý trên web.
 
-```jsonc
-{ "slug": "binh-ly-giu-nhiet", "name": "Bình, ly giữ nhiệt" }
-```
-
-Sửa xong thì deploy lại (mục 4).
-
-## 4. Cập nhật web trên Cloudflare
+## 5. Cập nhật web trên Cloudflare
 
 Mỗi khi sửa code hoặc cấu hình, mở PowerShell trong thư mục dự án và chạy:
 
 ```powershell
 git pull
+npm run cf:migrate     # cập nhật cấu trúc database nếu có thay đổi (không có thì báo "No migrations")
 npm run cf:deploy
 ```
 
@@ -103,7 +106,7 @@ Gói miễn phí của Cloudflare chỉ cho mỗi lần chạy rất ít thời 
 
 </details>
 
-## 5. Chạy trên máy (dành cho người sửa code)
+## 6. Chạy trên máy (dành cho người sửa code)
 
 Cần **Node.js 22.13 trở lên**.
 
@@ -146,7 +149,7 @@ tests/                 kiểm thử
 
 **Khi ĐMX đổi API:** lượt lấy dữ liệu sẽ báo lỗi rõ ràng ở mục "Các lần gần đây" trên web, không ghi dữ liệu sai. Mở trang danh mục bằng Chrome → DevTools (F12) → tab **Network** → lọc **Fetch/XHR** → bấm "Xem thêm" để thấy API mới, rồi sửa `src/crawler/dmx/client.ts` và `schema.ts`.
 
-## 6. Lưu ý
+## 7. Lưu ý
 
 - Hệ thống chỉ đọc **dữ liệu công khai**, mỗi ngày một lượt, tốc độ chậm để không làm phiền ĐMX.
 - Số "đã bán" là con số ĐMX hiển thị công khai, chỉ nên dùng để xem **xu hướng**, không phải doanh số thật.

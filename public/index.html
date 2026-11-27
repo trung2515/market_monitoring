@@ -156,6 +156,26 @@
           </table>
         </div>
       </section>
+
+      <!-- Danh mục theo dõi -->
+      <section class="panel panel-cats" aria-labelledby="cats-title">
+        <h2 id="cats-title" class="panel-title">Danh mục theo dõi</h2>
+        <p class="note">
+          Dán link danh mục trên dienmayxanh.com (ví dụ https://www.dienmayxanh.com/noi-com-dien) để theo dõi thêm.
+          Danh mục mới được lấy dữ liệu từ lần lấy kế tiếp.
+        </p>
+        <form id="cat-form" class="cat-form">
+          <label class="sr-only" for="cat-url">Link danh mục</label>
+          <input id="cat-url" name="url" type="url" placeholder="https://www.dienmayxanh.com/..." required />
+          <button id="cat-add-btn" class="btn btn-secondary" type="submit"><span class="btn-text">Thêm danh mục</span></button>
+        </form>
+        <p id="cat-msg" class="msg" aria-live="polite"></p>
+        <ul class="cat-list" id="cat-list"></ul>
+        <p class="note">
+          <b>Ngừng theo dõi:</b> không lấy dữ liệu mới nữa, nhưng vẫn giữ lịch sử và vẫn xuất Excel được các kỳ cũ. Bật lại lúc
+          nào cũng được. Chỉ xoá được danh mục chưa có dữ liệu (ví dụ thêm nhầm).
+        </p>
+      </section>
     </main>
 
     <script src="report.bundle.js"></script>
