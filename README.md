@@ -59,7 +59,7 @@ Xem chú thích trong [.env.example](.env.example). Quan trọng:
 
 ```jsonc
 {
-  "ownBrand": "Elmich", // thương hiệu của khách hàng
+  "ownBrand": "Elmich", // thương hiệu của công ty mình
   "competitorBrands": ["Sunhouse", "Lock&Lock"], // đối thủ chính (dùng cho bộ lọc nhanh trên web)
   "categories": [
     // danh mục cần theo dõi

@@ -5,7 +5,7 @@ import { setColumnWidths, sheetName, writeSheetTitle, writeTable, type ColumnDef
 
 /**
  * Mỗi danh mục (Bình đun siêu tốc, Chảo, Nồi...) = 1 sheet, gồm 2 bảng:
- *  [1] Từng sản phẩm của khách (Elmich) + các đối thủ cùng tầm giá, xếp ngang
+ *  [1] Từng sản phẩm của công ty (Elmich) + các đối thủ cùng tầm giá, xếp ngang
  *  [2] Toàn bộ sản phẩm trong danh mục (mọi hãng), sắp theo giá
  *
  * Hai bảng được xếp cột sao cho các cột cùng vị trí có độ rộng tương đương

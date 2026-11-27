@@ -35,16 +35,16 @@ export interface GoneProduct {
 
 export interface CompetitorMatch {
   competitor: ProductView;
-  /** Giá đối thủ − giá sản phẩm của khách */
+  /** Giá đối thủ − giá sản phẩm của công ty */
   priceDiff: number | null;
   priceDiffPercent: number | null;
-  /** Cùng kích thước / dung tích với sản phẩm của khách */
+  /** Cùng kích thước / dung tích với sản phẩm của công ty */
   sameSize: boolean;
   source: 'auto' | 'manual';
   note?: string;
 }
 
-/** 1 sản phẩm của khách (Elmich) kèm các đối thủ cùng tầm giá. */
+/** 1 sản phẩm của công ty (Elmich) kèm các đối thủ cùng tầm giá. */
 export interface OwnProductRow {
   own: ProductView;
   competitors: CompetitorMatch[];
@@ -54,7 +54,7 @@ export interface OwnProductRow {
 export interface CategoryReport {
   slug: string;
   name: string;
-  /** Sản phẩm của khách, sắp theo giá tăng dần */
+  /** Sản phẩm của công ty, sắp theo giá tăng dần */
   ownRows: OwnProductRow[];
   /** Toàn bộ sản phẩm (mọi hãng) trong danh mục, sắp theo giá tăng dần */
   products: ProductView[];
@@ -92,7 +92,7 @@ export interface ReportData {
   ownBrand: string;
   /** Ngưỡng ±% giá để coi là cùng tầm giá */
   priceTolerancePercent: number;
-  /** Số đối thủ tối đa cạnh mỗi sản phẩm của khách */
+  /** Số đối thủ tối đa cạnh mỗi sản phẩm của công ty */
   maxCompetitors: number;
   notes: string[];
 }
@@ -243,7 +243,7 @@ export function analyze(input: AnalysisInput): ReportData {
   }
   soldDeltas.sort((a, b) => b.delta - a.delta);
 
-  // ---- Từng danh mục: SP của khách + đối thủ cùng tầm giá ----
+  // ---- Từng danh mục: SP của công ty + đối thủ cùng tầm giá ----
   const categories = buildCategoryReports(current, own, roleOf, input.segment, input.categoryOrder ?? []);
 
   // ---- Tổng hợp theo hãng ----
@@ -304,7 +304,7 @@ export function analyze(input: AnalysisInput): ReportData {
 }
 
 /**
- * Chia sản phẩm cuối kỳ theo danh mục; với mỗi SP của khách tìm đối thủ cùng tầm giá.
+ * Chia sản phẩm cuối kỳ theo danh mục; với mỗi SP của công ty tìm đối thủ cùng tầm giá.
  */
 export function buildCategoryReports(
   current: ProductView[],

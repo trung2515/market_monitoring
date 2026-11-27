@@ -2,7 +2,7 @@ import type * as ExcelJS from 'exceljs';
 import type { ReportData } from '../../analysis';
 import { addTableSheet, COLORS } from '../tableSheet';
 
-const ROLE_LABEL = { own: 'Khách hàng', competitor: 'Đối thủ', other: 'Khác' } as const;
+const ROLE_LABEL = { own: 'Công ty', competitor: 'Đối thủ', other: 'Khác' } as const;
 
 /** Sheet "Tổng quan": thông tin kỳ báo cáo + bảng tổng hợp theo danh mục × hãng. */
 export function addSummarySheet(wb: ExcelJS.Workbook, data: ReportData, generatedAt: Date): void {

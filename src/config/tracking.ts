@@ -3,7 +3,7 @@ import path from 'node:path';
 import { z } from 'zod';
 
 /**
- * Cấu hình nghiệp vụ: theo dõi danh mục nào, thương hiệu nào là của khách, ai là đối thủ.
+ * Cấu hình nghiệp vụ: theo dõi danh mục nào, thương hiệu nào là của công ty mình (ownBrand), ai là đối thủ.
  * Chỉnh trong config/tracking.json – không cần sửa code.
  */
 const trackingSchema = z.object({
@@ -24,7 +24,7 @@ const trackingSchema = z.object({
     .object({
       /** Giá đối thủ nằm trong ±x% giá Elmich thì coi là cùng tầm giá */
       priceTolerancePercent: z.number().min(0).max(100).default(20),
-      /** Số đối thủ hiển thị cạnh mỗi sản phẩm của khách */
+      /** Số đối thủ hiển thị cạnh mỗi sản phẩm của công ty */
       maxCompetitorsPerProduct: z.number().int().min(1).max(10).default(3),
       /** true = chỉ so với các hãng trong competitorBrands; false = so với mọi hãng khác */
       onlyListedCompetitors: z.boolean().default(false),

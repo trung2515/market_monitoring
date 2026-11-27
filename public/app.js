@@ -42,6 +42,7 @@
     $('#preview-category').innerHTML =
       '<option value="">Tất cả danh mục</option>' +
       options.categories.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</option>`).join('');
+    $('#focus-brands-btn').textContent = `${options.ownBrand} + đối thủ chính`;
     const own = options.ownBrand.toLowerCase();
     $('#brands').innerHTML =
       options.brands
