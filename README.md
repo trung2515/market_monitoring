@@ -14,6 +14,8 @@ Công cụ tự lấy giá sản phẩm của **Elmich** và các đối thủ (
 2. Chọn kỳ báo cáo (**Theo tuần / Theo tháng / Tuỳ chọn**), chọn danh mục và thương hiệu nếu cần lọc.
 3. Bấm **Tải file Excel**.
 
+Phần **Tổng quan thị trường** trên web có các biểu đồ xem nhanh (lọc theo danh mục, 7 / 30 / 90 ngày): thị phần theo lượt bán, bán trong kỳ theo hãng, giá bán trung bình, số sản phẩm theo khoảng giá, số sản phẩm chạy flash sale mỗi ngày, và danh sách sản phẩm mới của đối thủ. Rê chuột vào biểu đồ để xem số chi tiết, bấm "Xem số liệu" để xem dạng bảng.
+
 Nút **Lấy data hôm nay** chỉ cần bấm khi muốn có giá mới nhất ngay lúc đó, ví dụ đang có flash sale. Mất khoảng dưới 1 phút. Lỡ đóng trang giữa chừng cũng không sao: hệ thống tự làm tiếp trong vòng 10 phút. Lấy lại trong cùng ngày sẽ ghi đè dữ liệu ngày đó, không bị trùng.
 
 > Hệ thống chỉ có dữ liệu **từ ngày bắt đầu chạy**. ĐMX không cho xem lại giá của các ngày đã qua. Ngày nào không lấy được dữ liệu thì để trống.
@@ -136,7 +138,7 @@ src/report/            phân tích số liệu (analysis.ts, market.ts, sales.ts
 src/api/               API cho web
 src/worker/            bản chạy trên Cloudflare
 src/client/            tạo file Excel trên trình duyệt
-public/                giao diện web
+public/                giao diện web (dashboard.js = biểu đồ)
 tests/                 kiểm thử
 ```
 

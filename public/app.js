@@ -80,6 +80,7 @@
     $('#preview-category').innerHTML =
       '<option value="">Tất cả danh mục</option>' +
       o.categories.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</option>`).join('');
+    window.Dashboard?.setCategories(o.categories);
     $('#focus-brands-btn').textContent = `${o.ownBrand} + đối thủ chính`;
     $('#only-own-label').textContent = `Chỉ ${o.ownBrand}`;
     $('#brand-sub').textContent = `Công ty: ${o.ownBrand}`;
@@ -363,6 +364,7 @@
       crawling = false;
       setBusy(btn, false, 'Lấy data hôm nay');
       await Promise.all([loadStatus(), loadOptions(), loadPreview(), loadCategories()]).catch(() => {});
+      window.Dashboard?.reload();
     }
   });
 

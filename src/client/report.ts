@@ -11,6 +11,7 @@ import type { ProductFilter } from '../db/rowMappers';
 import type { PriceSnapshot, StoredProduct } from '../domain/types';
 import { buildWorkbook } from '../report/excel/workbook';
 import type { PeriodType } from '../report/period';
+import type { ReportData } from '../report/analysis';
 import { buildReportData, reportFileName, type ReportSource } from '../report/reportBuilder';
 import { todayInTimeZone } from '../utils/date';
 
@@ -144,15 +145,13 @@ class ApiReportSource implements ReportSource {
   }
 }
 
-/** Tải dữ liệu → phân tích → dựng Excel → tải file về máy. */
-export async function download(params: DownloadParams, onProgress: Progress = () => {}): Promise<string> {
+/** Tải dữ liệu qua API → phân tích (dùng cho cả file Excel và dashboard trên web). */
+export async function data(params: DownloadParams, onProgress: Progress = () => {}): Promise<ReportData> {
   onProgress('Đang tải cấu hình…');
   const options = await getJson<{ tracking: unknown }>('/api/options');
   const tracking = parseTrackingConfig(options.tracking);
-
-  const source = new ApiReportSource(onProgress);
-  const data = await buildReportData(
-    source,
+  return buildReportData(
+    new ApiReportSource(onProgress),
     tracking,
     {
       type: params.period,
@@ -163,11 +162,15 @@ export async function download(params: DownloadParams, onProgress: Progress = ()
     },
     todayInTimeZone('Asia/Ho_Chi_Minh'),
   );
+}
 
+/** Tải dữ liệu → phân tích → dựng Excel → tải file về máy. */
+export async function download(params: DownloadParams, onProgress: Progress = () => {}): Promise<string> {
+  const reportData = await data(params, onProgress);
   onProgress('Đang tạo file Excel…');
-  const workbook = buildWorkbook(data);
+  const workbook = buildWorkbook(reportData);
   const buffer = await workbook.xlsx.writeBuffer();
-  const fileName = reportFileName(data);
+  const fileName = reportFileName(reportData);
   const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
   const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: fileName });
   document.body.appendChild(a);
@@ -177,4 +180,4 @@ export async function download(params: DownloadParams, onProgress: Progress = ()
   return fileName;
 }
 
-(globalThis as unknown as { MarketReport: unknown }).MarketReport = { download };
+(globalThis as unknown as { MarketReport: unknown }).MarketReport = { download, data };

@@ -119,6 +119,81 @@
         <ol class="runs" id="runs"></ol>
       </section>
 
+      <!-- Dashboard -->
+      <section class="panel panel-dash" id="dashboard" aria-labelledby="dash-title">
+        <div class="dash-head">
+          <div>
+            <h2 id="dash-title" class="panel-title">Tổng quan thị trường</h2>
+            <p id="dash-status" class="msg" aria-live="polite"></p>
+          </div>
+          <div class="dash-filters">
+            <label class="sr-only" for="dash-category">Danh mục</label>
+            <select id="dash-category">
+              <option value="">Tất cả danh mục</option>
+            </select>
+            <div class="segmented" id="dash-range" role="group" aria-label="Khoảng thời gian">
+              <button type="button" data-days="7" aria-pressed="false">7 ngày</button>
+              <button type="button" data-days="30" aria-pressed="true">30 ngày</button>
+              <button type="button" data-days="90" aria-pressed="false">90 ngày</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="kpis" id="dash-kpis"></div>
+
+        <div class="dash-grid">
+          <figure class="dash-card">
+            <figcaption>
+              <h3>Thị phần theo lượt bán</h3>
+              <p>% tổng số đã bán cộng dồn của các sản phẩm đang bán</p>
+            </figcaption>
+            <div class="dash-chart" id="chart-share"></div>
+            <div id="chart-share-table"></div>
+          </figure>
+          <figure class="dash-card">
+            <figcaption>
+              <h3>Bán trong kỳ theo hãng</h3>
+              <p>Số bán thêm trong khoảng thời gian đã chọn (ước tính)</p>
+            </figcaption>
+            <div class="dash-chart" id="chart-sold"></div>
+            <div id="chart-sold-table"></div>
+          </figure>
+          <figure class="dash-card">
+            <figcaption>
+              <h3>Giá bán trung bình theo hãng</h3>
+              <p>Các hãng nhiều sản phẩm nhất, rê chuột để xem mức giảm giá trung bình</p>
+            </figcaption>
+            <div class="dash-chart" id="chart-price"></div>
+            <div id="chart-price-table"></div>
+          </figure>
+          <figure class="dash-card">
+            <figcaption>
+              <h3>Số sản phẩm theo khoảng giá</h3>
+              <p>Khoảng giá nào đối thủ đông mà Elmich còn ít hàng</p>
+            </figcaption>
+            <div id="chart-bands-legend"></div>
+            <div class="dash-chart" id="chart-bands"></div>
+            <div id="chart-bands-table"></div>
+          </figure>
+          <figure class="dash-card dash-wide">
+            <figcaption>
+              <h3>Số sản phẩm chạy flash sale mỗi ngày</h3>
+              <p>Elmich và 3 đối thủ chính – cho thấy hãng nào đang đẩy khuyến mãi</p>
+            </figcaption>
+            <div id="chart-flash-legend"></div>
+            <div class="dash-chart" id="chart-flash"></div>
+            <div id="chart-flash-table"></div>
+          </figure>
+          <figure class="dash-card dash-wide">
+            <figcaption>
+              <h3>Sản phẩm mới của đối thủ</h3>
+              <p>Xuất hiện lần đầu trên Điện Máy Xanh trong khoảng thời gian đã chọn</p>
+            </figcaption>
+            <div id="dash-new"></div>
+          </figure>
+        </div>
+      </section>
+
       <!-- Bảng giá -->
       <section class="panel panel-table" aria-labelledby="table-title">
         <div class="table-head">
@@ -180,5 +255,6 @@
 
     <script src="report.bundle.js"></script>
     <script src="app.js"></script>
+    <script src="dashboard.js"></script>
   </body>
 </html>
