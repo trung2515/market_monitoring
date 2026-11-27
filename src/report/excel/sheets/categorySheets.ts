@@ -3,6 +3,7 @@ import type { CategoryReport, OwnProductRow, ProductView, ReportData } from '../
 import { normalizeBrand } from '../../../utils/text';
 import { flashWindow } from '../../market';
 import { soldNumber } from '../columns';
+import type { SalesWindow } from '../../sales';
 import { createSheet, setColumnWidths, sheetName, writeSheetTitle, writeTable, type ColumnDef } from '../tableSheet';
 import { THEME } from '../theme';
 
@@ -23,17 +24,27 @@ export function addCategorySheets(wb: ExcelJS.Workbook, data: ReportData): void 
 
 /** Số lượng đã bán cộng dồn (số chính xác từ API; web ĐMX chỉ hiện làm tròn "25,2k"). */
 const sold = (v: ProductView | undefined) => (v ? soldNumber(v.snapshot) : null);
-/** Số bán thêm trong kỳ = đã bán ngày cuối − đã bán ngày mốc (trống nếu chưa có ngày mốc để so). */
-const soldInPeriod = (data: ReportData) => {
-  const byCode = new Map(data.soldDeltas.map((s) => [s.product.productCode, s.delta]));
-  return (v: ProductView | undefined) => (v ? (byCode.get(v.product.productCode) ?? null) : null);
+/** Số bán trong ngày / tuần / tháng (tới ngày cuối kỳ) – trống nếu chưa có ngày trước để so. */
+const salesOf = (data: ReportData, window: SalesWindow) => (v: ProductView | undefined) =>
+  v ? (data.sales?.byCode.get(v.product.productCode)?.[window] ?? null) : null;
+const salesNote = (data: ReportData) => {
+  const b = data.sales?.baseDates;
+  const base = (d: string | null | undefined) => d ?? 'chưa đủ dữ liệu';
+  return (
+    `Đã bán = tổng cộng dồn ĐMX công bố. Bán trong ngày / tuần / tháng = đã bán ngày ${data.endDate ?? '—'} trừ đã bán ngày ` +
+    `${base(b?.day)} / ${base(b?.week)} / ${base(b?.month)} (ước tính, ĐMX không công bố số bán theo ngày).`
+  );
 };
+const SALES_COLUMNS: [SalesWindow, string][] = [
+  ['day', 'Bán trong ngày'],
+  ['week', 'Bán trong tuần'],
+  ['month', 'Bán trong tháng'],
+];
 const flashTime = (v: ProductView | undefined) => (v ? flashWindow(v.snapshot.flashStart, v.snapshot.flashEnd) : null);
 const promoText = (v: ProductView) => [v.snapshot.promoLabels, v.snapshot.giftText].filter(Boolean).join('; ');
 
 function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
   const own = data.ownBrand;
-  const soldDelta = soldInPeriod(data);
   const cols: ColumnDef<OwnProductRow>[] = [
     { group: own, header: `Mã ${own}`, width: 15, value: (r) => r.own.product.modelCode },
     { group: own, header: 'Tên sản phẩm', width: 48, value: (r) => r.own.product.name },
@@ -44,7 +55,15 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
     { group: own, header: 'Giá flash sale', width: 13, format: 'money', value: (r) => r.own.snapshot.flashPrice },
     { group: own, header: 'Thời gian flash', width: 14, center: true, value: (r) => flashTime(r.own) },
     { group: own, header: 'Đã bán', width: 10, format: 'int', value: (r) => sold(r.own) },
-    { group: own, header: 'Bán thêm trong kỳ', width: 11, format: 'int', value: (r) => soldDelta(r.own) },
+    ...SALES_COLUMNS.map(
+      ([w, header]): ColumnDef<OwnProductRow> => ({
+        group: own,
+        header,
+        width: 10,
+        format: 'int',
+        value: (r) => salesOf(data, w)(r.own),
+      }),
+    ),
     { group: own, header: 'Quà / KM khác', width: 30, value: (r) => promoText(r.own) },
   ];
 
@@ -64,13 +83,15 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
       { group, header: 'Flash sale', width: 13, format: 'money', value: (r) => m(r)?.competitor.snapshot.flashPrice },
       { group, header: 'Thời gian flash', width: 14, center: true, value: (r) => flashTime(m(r)?.competitor) },
       { group, header: 'Đã bán', width: 10, format: 'int', value: (r) => sold(m(r)?.competitor) },
-      {
-        group,
-        header: 'Bán thêm trong kỳ',
-        width: 11,
-        format: 'int',
-        value: (r) => soldDelta(m(r)?.competitor),
-      },
+      ...SALES_COLUMNS.map(
+        ([w, header]): ColumnDef<OwnProductRow> => ({
+          group,
+          header,
+          width: 10,
+          format: 'int',
+          value: (r) => salesOf(data, w)(m(r)?.competitor),
+        }),
+      ),
       {
         group,
         header: `Chênh so với ${own}`,
@@ -87,7 +108,6 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
 function allColumns(data: ReportData): ColumnDef<ProductView>[] {
   const changeByCode = new Map(data.priceChanges.map((c) => [c.product.productCode, c.diff]));
   const newCodes = new Set(data.newProducts.map((p) => p.product.productCode));
-  const soldDelta = soldInPeriod(data);
   return [
     { header: 'Hãng', width: 15, value: (r) => r.product.brand },
     { header: 'Tên sản phẩm', width: 48, value: (r) => r.product.name },
@@ -98,7 +118,9 @@ function allColumns(data: ReportData): ColumnDef<ProductView>[] {
     { header: 'Giá flash sale', width: 13, format: 'money', value: (r) => r.snapshot.flashPrice },
     { header: 'Thời gian flash', width: 14, center: true, value: (r) => flashTime(r) },
     { header: 'Đã bán', width: 10, format: 'int', value: sold },
-    { header: 'Bán thêm trong kỳ', width: 11, format: 'int', value: soldDelta },
+    ...SALES_COLUMNS.map(
+      ([w, header]): ColumnDef<ProductView> => ({ header, width: 10, format: 'int', value: salesOf(data, w) }),
+    ),
     { header: 'Quà / KM khác', width: 30, value: promoText },
     { header: 'Mã model', width: 14, value: (r) => r.product.modelCode },
     { header: 'Rating', width: 8, format: 'decimal', value: (r) => r.snapshot.rating },
@@ -128,7 +150,8 @@ function addCategorySheet(wb: ExcelJS.Workbook, data: ReportData, category: Cate
     `${category.name} – ${data.period.title} (dữ liệu ngày ${data.endDate ?? '—'})`,
     `${category.products.length} sản phẩm, trong đó ${category.ownRows.length} của ${data.ownBrand}. ` +
       `Đối thủ cùng tầm giá: giá bán chênh trong ±${data.priceTolerancePercent}%, ưu tiên cùng kích thước rồi giá gần nhất. ` +
-      `Chênh % = (giá đối thủ − giá ${data.ownBrand}) / giá ${data.ownBrand}. Nền xanh lá = sản phẩm ${data.ownBrand}; nền cam = chưa có đối thủ cùng tầm giá.`,
+      `Chênh % = (giá đối thủ − giá ${data.ownBrand}) / giá ${data.ownBrand}. Nền xanh lá = sản phẩm ${data.ownBrand}; nền cam = chưa có đối thủ cùng tầm giá. ` +
+      salesNote(data),
   );
 
   row = writeTable(ws, row, {

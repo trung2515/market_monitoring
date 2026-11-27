@@ -3,6 +3,7 @@ import type { ProductFilter } from '../db/rowMappers';
 import type { PriceSnapshot, StoredProduct } from '../domain/types';
 import { analyze, type ReportData } from './analysis';
 import { resolvePeriod, type PeriodType } from './period';
+import { computeSales, salesBaseDates } from './sales';
 
 export interface ReportRequest {
   type: PeriodType;
@@ -43,7 +44,7 @@ export async function buildReportData(
   const endDate = datesInPeriod.at(-1) ?? null;
   const snapshots = endDate ? await source.snapshotsBetween(baselineDate ?? period.from, endDate, req.filter) : [];
 
-  return analyze({
+  const data = analyze({
     period,
     products,
     snapshots,
@@ -56,6 +57,16 @@ export async function buildReportData(
     categoryOrder: tracking.categories.map((c) => c.slug),
     market: tracking.report,
   });
+
+  // Số bán trong ngày / tuần / tháng (tính tới ngày cuối kỳ) – cần thêm snapshot của các ngày mốc
+  if (endDate) {
+    const baseDates = await salesBaseDates(source, endDate);
+    const have = new Set(snapshots.map((s) => s.crawlDate));
+    const missing = [...new Set(Object.values(baseDates))].filter((d): d is string => !!d && !have.has(d));
+    const extra = await Promise.all(missing.map((d) => source.snapshotsBetween(d, d, req.filter)));
+    data.sales = computeSales(endDate, baseDates, [...snapshots, ...extra.flat()]);
+  }
+  return data;
 }
 
 export function reportFileName(data: ReportData): string {

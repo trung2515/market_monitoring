@@ -3,6 +3,7 @@ import type { PriceSnapshot, StoredProduct } from '../domain/types';
 import { normalizeBrand } from '../utils/text';
 import { analyzeMarket, emptyMarket, type MarketConfig, type MarketData } from './market';
 import type { Period } from './period';
+import type { SalesWindows } from './sales';
 
 /**
  * Toàn bộ logic phân tích là hàm thuần (không đụng DB/Excel) → dễ test, dễ đổi quy tắc.
@@ -98,6 +99,8 @@ export interface ReportData {
   /** Số đối thủ tối đa cạnh mỗi sản phẩm của công ty */
   maxCompetitors: number;
   notes: string[];
+  /** Số bán trong ngày / tuần / tháng tới ngày cuối kỳ (do reportBuilder bổ sung) */
+  sales?: SalesWindows;
 }
 
 export interface AnalysisInput {
