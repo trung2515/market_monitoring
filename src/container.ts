@@ -41,7 +41,7 @@ export function createContext(overrides: Partial<Pick<AppContext, 'env' | 'track
   });
 
   const engine = new CrawlEngine({ store, client, tracking, timeZone: env.TIMEZONE, logger: logger.child('crawl') });
-  const api = createApi({ store, engine, client, tracking });
+  const api = createApi({ store, engine, client, tracking, manualCrawlEnabled: env.MANUAL_CRAWL_ENABLED });
 
   return { env, tracking, logger, db, store, engine, api, close: () => db.close() };
 }

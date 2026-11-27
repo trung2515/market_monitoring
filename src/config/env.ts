@@ -21,6 +21,8 @@ const envSchema = z.object({
 
   CRAWL_CRON: z.string().default('25 7 * * *'),
   CRAWL_ON_SCHEDULE: booleanString.default('true'),
+  /** false = tạm tắt nút "Lấy data hôm nay" trên web */
+  MANUAL_CRAWL_ENABLED: booleanString.default('true'),
 
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),
 });

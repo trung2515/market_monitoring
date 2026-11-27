@@ -686,6 +686,11 @@ select:hover {
 .btn-secondary:hover {
   background: var(--forest-soft);
 }
+.btn:disabled:not([aria-busy='true']) {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: var(--paper);
+}
 .btn[aria-busy='true'] {
   cursor: progress;
   opacity: 0.85;

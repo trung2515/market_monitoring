@@ -100,6 +100,11 @@ for (const [label, makeDriver] of [
       const products = await routeApi(api, 'GET', '/api/report/products', q(''));
       assert.equal((products?.body as { products: unknown[] }).products.length, 3);
       assert.equal((await routeApi(api, 'GET', '/api/khong-co', q('')))?.status, 404);
+
+      // Tắt nút lấy dữ liệu: bấm tay bị từ chối, trạng thái báo cho web biết
+      const off = createApi({ store, engine, client, tracking, manualCrawlEnabled: false });
+      assert.equal((await routeApi(off, 'POST', '/api/crawl', q('')))?.status, 403);
+      assert.equal(((await routeApi(off, 'GET', '/api/status', q('')))?.body as { manualCrawlEnabled: boolean }).manualCrawlEnabled, false);
     });
 
     it('quản lý danh mục theo dõi trên web', async () => {

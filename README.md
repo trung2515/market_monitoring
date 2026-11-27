@@ -65,6 +65,7 @@ Làm ngay trên web, ở mục **Danh mục theo dõi** (cuối trang). Không c
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
 | Danh sách đối thủ chính                    | `config/tracking.json` → `competitorBrands`                                                     |
 | Gộp tên hãng ĐMX ghi khác nhau (vd LocknLock → Lock&Lock) | `config/tracking.json` → `brandAliases` |
+| Tạm tắt / bật nút "Lấy data hôm nay" | `wrangler.jsonc` → `vars.MANUAL_CRAWL_ENABLED` (`"false"` / `"true"`); bản local: `MANUAL_CRAWL_ENABLED` trong `.env` |
 | Khoảng giá "cùng tầm giá" (mặc định ±20%) | `config/tracking.json` → `segment.priceTolerancePercent`                                        |
 | Giờ tự lấy dữ liệu trên Cloudflare        | `wrangler.jsonc` (mục `crons`) **và** `START_CRONS` trong `src/worker/index.ts`. Giờ ghi theo UTC = giờ VN − 7 |
 

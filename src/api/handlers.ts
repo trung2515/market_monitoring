@@ -28,6 +28,8 @@ export interface ApiDeps {
   /** Dùng để kiểm tra link danh mục khi thêm mới */
   client: DmxClient;
   tracking: TrackingConfig;
+  /** false = tắt nút "Lấy data hôm nay" (lịch tự động vẫn chạy). Mặc định true. */
+  manualCrawlEnabled?: boolean;
 }
 
 const dateParam = z.string().refine(isDateString, 'Ngày phải có dạng YYYY-MM-DD');
@@ -75,7 +77,7 @@ function compact<T extends object>(obj: T): Partial<T> {
   return out as Partial<T>;
 }
 
-export function createApi({ store, engine, client, tracking: baseTracking }: ApiDeps) {
+export function createApi({ store, engine, client, tracking: baseTracking, manualCrawlEnabled = true }: ApiDeps) {
   const tracking = () => withStoredCategories(store, baseTracking);
   return {
     /** Trạng thái: lần cào gần nhất, tiến độ lượt đang chạy, số liệu tổng quát. */
@@ -96,6 +98,7 @@ export function createApi({ store, engine, client, tracking: baseTracking }: Api
         lastCrawlDate,
         crawlDayCount: crawlDates.length,
         productCount,
+        manualCrawlEnabled,
       };
     },
 
@@ -210,6 +213,9 @@ export function createApi({ store, engine, client, tracking: baseTracking }: Api
     // ----- Lấy dữ liệu -----
 
     async crawlStart(trigger: CrawlTrigger) {
+      if (trigger === 'manual' && !manualCrawlEnabled) {
+        throw new HttpError(403, 'Nút lấy dữ liệu đang tạm tắt. Hệ thống vẫn tự lấy dữ liệu lúc 7:25 mỗi sáng.');
+      }
       const { run, created } = await engine.start(trigger);
       return {
         message: created ? 'Đã bắt đầu lấy dữ liệu.' : 'Đang có một lượt lấy dữ liệu chạy dở, tiếp tục lượt đó.',

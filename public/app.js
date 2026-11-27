@@ -289,7 +289,13 @@
         : `Hôm nay đã bấm ${manualToday} lần.`;
 
     const crawlBtn = $('#crawl-btn');
-    if (!crawling) {
+    $('.crawl-warning').hidden = s.manualCrawlEnabled === false;
+    if (s.manualCrawlEnabled === false) {
+      // Nút đang tạm tắt (cấu hình MANUAL_CRAWL_ENABLED)
+      crawlBtn.disabled = true;
+      crawlBtn.querySelector('.btn-text').textContent = 'Lấy data hôm nay (đang tạm tắt)';
+      if (!s.running) setMsg($('#crawl-msg'), 'Nút đang tạm tắt. Hệ thống vẫn tự lấy dữ liệu lúc 7:25 mỗi sáng.', '');
+    } else if (!crawling) {
       setBusy(crawlBtn, false, s.running ? 'Tiếp tục lấy dữ liệu' : 'Lấy data hôm nay');
       if (s.running && s.progress) setMsg($('#crawl-msg'), progressText(s.progress), '');
     }

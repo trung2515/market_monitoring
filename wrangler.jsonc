@@ -34,7 +34,9 @@
   "vars": {
     "TIMEZONE": "Asia/Ho_Chi_Minh",
     "DMX_PROVINCE_ID": "1027",
-    "LOG_LEVEL": "info"
+    "LOG_LEVEL": "info",
+    // "false" = tạm tắt nút "Lấy data hôm nay" trên web (lịch tự động 7:25 vẫn chạy). Bật lại: đổi thành "true" rồi deploy.
+    "MANUAL_CRAWL_ENABLED": "false"
   },
 
   "observability": { "enabled": true }

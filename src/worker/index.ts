@@ -25,6 +25,8 @@ export interface Env {
   TIMEZONE?: string;
   DMX_PROVINCE_ID?: string;
   LOG_LEVEL?: string;
+  /** "false" = tạm tắt nút "Lấy data hôm nay" (đặt trong wrangler.jsonc → vars) */
+  MANUAL_CRAWL_ENABLED?: string;
 }
 
 /**
@@ -53,7 +55,7 @@ function createServices(env: Env) {
     logger: logger.child('dmx'),
   });
   const engine = new CrawlEngine({ store, client, tracking: tracking(), timeZone, logger: logger.child('crawl') });
-  return { store, engine, logger, timeZone, api: createApi({ store, engine, client, tracking: tracking() }) };
+  return { store, engine, logger, timeZone, api: createApi({ store, engine, client, tracking: tracking(), manualCrawlEnabled: env.MANUAL_CRAWL_ENABLED !== 'false' }) };
 }
 
 export default {
