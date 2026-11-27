@@ -704,6 +704,31 @@ select:hover {
   color: var(--muted);
 }
 
+.crawl-warning {
+  margin-top: 10px;
+  padding: 10px 12px;
+  border: 1px solid color-mix(in srgb, var(--amber) 35%, transparent);
+  border-left: 3px solid var(--amber);
+  border-radius: var(--radius-sm);
+  background: var(--amber-soft);
+  font-size: 12.5px;
+  line-height: 1.5;
+  color: var(--ink-2);
+}
+.crawl-warning p + p {
+  margin-top: 6px;
+}
+.crawl-warning b {
+  color: var(--ink);
+}
+.crawl-today {
+  font-weight: 600;
+  color: var(--amber);
+}
+.crawl-today.over {
+  color: var(--danger);
+}
+
 /* ---------- Khối dữ liệu ---------- */
 .last-run {
   padding: 16px;

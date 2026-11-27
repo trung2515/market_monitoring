@@ -116,7 +116,18 @@
           <span class="btn-text">Lấy data hôm nay</span>
         </button>
         <p id="crawl-msg" class="msg" aria-live="polite"></p>
-        <p class="note">Hệ thống tự lấy dữ liệu mỗi sáng. Chỉ cần bấm khi muốn có số liệu mới ngay.</p>
+        <div class="crawl-warning" role="note">
+          <p>
+            <b>Hạn chế bấm nhiều lần.</b> Hệ thống đã tự lấy dữ liệu lúc 8:17 mỗi sáng. Chỉ bấm khi thật cần (ví dụ xem giá
+            trong giờ flash sale), <b>tối đa 2–3 lần mỗi ngày</b>.
+          </p>
+          <p>
+            Bấm quá nhiều có thể khiến Điện Máy Xanh <b>chặn truy cập</b> (hệ thống sẽ không lấy được dữ liệu nữa, kể cả
+            lượt tự động) và làm hết giới hạn miễn phí trong ngày. Lấy lại trong cùng ngày chỉ thay giá cũ bằng giá mới nhất,
+            không thêm dữ liệu.
+          </p>
+          <p id="crawl-today" class="crawl-today" hidden></p>
+        </div>
 
         <h3 class="sub-title">Các lần gần đây</h3>
         <ol class="runs" id="runs"></ol>

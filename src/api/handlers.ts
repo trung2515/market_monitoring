@@ -82,7 +82,7 @@ export function createApi({ store, engine, client, tracking: baseTracking }: Api
     async status() {
       const [running, recentRuns, firstCrawlDate, lastCrawlDate, crawlDates, productCount] = await Promise.all([
         store.runningRun(),
-        store.recentRuns(5),
+        store.recentRuns(20),
         store.firstCrawlDate(),
         store.lastCrawlDate(),
         store.crawlDates(),

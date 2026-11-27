@@ -265,6 +265,7 @@
 
     $('#runs').innerHTML =
       s.recentRuns
+        .slice(0, 5)
         .map((r) => {
           const time = new Date(r.startedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
           const lines = [...(r.error ? r.error.split('\n') : []), ...(r.warnings || [])].filter(Boolean);
@@ -276,6 +277,16 @@
           </li>`;
         })
         .join('') || '<li><span class="empty">Chưa có lần nào.</span></li>';
+
+    // Đếm số lần bấm tay hôm nay để nhắc nhở
+    const manualToday = s.recentRuns.filter((r) => r.trigger === 'manual' && r.crawlDate === today).length;
+    const todayEl = $('#crawl-today');
+    todayEl.hidden = manualToday === 0;
+    todayEl.classList.toggle('over', manualToday >= 3);
+    todayEl.textContent =
+      manualToday >= 3
+        ? `Hôm nay đã bấm ${manualToday} lần – nên dừng, để lượt tự động sáng mai lấy tiếp.`
+        : `Hôm nay đã bấm ${manualToday} lần.`;
 
     const crawlBtn = $('#crawl-btn');
     if (!crawling) {
