@@ -5,7 +5,6 @@ import { parseTrackingConfig, type TrackingConfig } from '../config/tracking';
 import { CrawlEngine } from '../crawler/crawlEngine';
 import { DmxClient } from '../crawler/dmx/client';
 import { SqlStore } from '../db/sqlStore';
-import { todayInTimeZone } from '../utils/date';
 import { createLogger, type LogLevel } from '../utils/logger';
 import type { D1Database, ExecutionContext, Fetcher, ScheduledController } from './cfTypes';
 import { D1Driver } from './d1Driver';
@@ -29,10 +28,15 @@ export interface Env {
 }
 
 /**
- * Cron chạy mỗi phút từ 8:17 đến 8:59 sáng giờ VN (01:17–01:59 UTC): bắt đầu lượt cào hằng ngày + xử lý từng trang.
- * Đổi giờ: sửa cả hằng số này và "triggers.crons" trong wrangler.jsonc (2 chỗ phải giống hệt nhau).
+ * Các cron BẮT ĐẦU lượt cào tự động (giờ UTC = giờ VN − 7), mỗi ngày 2 lượt:
+ *   "17-59 1 * * *"  = 8:17–8:59 sáng giờ VN
+ *   "17-59 15 * * *" = 22:17–22:59 tối giờ VN
+ * Phút đầu tiên bắt đầu lượt cào, các phút sau mỗi phút xử lý 1 trang.
+ * Đổi giờ: sửa cả danh sách này và "triggers.crons" trong wrangler.jsonc (phải giống hệt nhau).
  */
-export const DAILY_CRON = '17-59 1 * * *';
+export const START_CRONS = new Set(['17-59 1 * * *', '17-59 15 * * *']);
+/** Đã có lượt cào bắt đầu trong khoảng này thì không bắt đầu lượt mới (vd vừa bấm tay). */
+const RECENT_RUN_MS = 90 * 60_000;
 
 let cachedTracking: TrackingConfig | null = null;
 const tracking = () => (cachedTracking ??= parseTrackingConfig(trackingJson));
@@ -102,17 +106,17 @@ export default {
   },
 
   async scheduled(controller: ScheduledController, env: Env, ctx: ExecutionContext): Promise<void> {
-    const { store, engine, logger, timeZone } = createServices(env);
+    const { store, engine, logger } = createServices(env);
     ctx.waitUntil(
       (async () => {
-        if (controller.cron === DAILY_CRON) {
-          // Bắt đầu lượt hằng ngày nếu hôm nay chưa có lượt nào thành công / đang chạy
-          const today = todayInTimeZone(timeZone, new Date(controller.scheduledTime));
+        if (START_CRONS.has(controller.cron)) {
+          // Bắt đầu lượt mới nếu trong 90 phút qua chưa có lượt nào đang chạy / đã xong
+          const since = controller.scheduledTime - RECENT_RUN_MS;
           const runs = await store.recentRuns(10);
-          const hasToday = runs.some(
-            (r) => r.crawlDate === today && (r.status === 'running' || r.status === 'success' || r.status === 'partial'),
+          const recent = runs.some(
+            (r) => Date.parse(r.startedAt) >= since && (r.status === 'running' || r.status === 'success' || r.status === 'partial'),
           );
-          if (!hasToday) await engine.start('schedule');
+          if (!recent) await engine.start('schedule');
         }
         // Mỗi lần cron chạy xử lý 1 trang (nếu có lượt đang chạy)
         if (await store.runningRun()) await engine.step();

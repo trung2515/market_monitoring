@@ -3,7 +3,7 @@
 Công cụ tự lấy giá sản phẩm của **Elmich** và các đối thủ (Sunhouse, Lock&Lock, Tefal…) trên **dienmayxanh.com**, rồi xuất báo cáo Excel để phân tích thị trường.
 
 - **Link web:** https://elmich-monitor.dinhtrung2515.workers.dev (đăng nhập bằng tài khoản đã đặt).
-- Mỗi sáng **8:17** hệ thống tự lấy dữ liệu, không cần bật máy.
+- Mỗi ngày hệ thống tự lấy dữ liệu **2 lần, lúc 8:17 và 22:17**, không cần bật máy.
 - Trên web có 2 nút chính: **Lấy data hôm nay** và **Tải file Excel** (theo tuần, tháng hoặc khoảng ngày tuỳ chọn).
 
 ---
@@ -40,7 +40,7 @@ Nút **Lấy data hôm nay** chỉ cần bấm khi muốn có giá mới nhất 
 
 - **Giá niêm yết:** giá gốc (giá gạch ngang trên web).
 - **Giá bán hiện tại:** giá đang bán (đã giảm).
-- **Giá flash sale:** giá giờ vàng, kèm **thời gian flash** (từ giờ nào đến giờ nào).
+- **Giá flash sale:** giá giờ vàng, kèm **thời gian flash** (từ giờ nào đến giờ nào). Lượt sáng ghi nhận cả flash sale sẽ diễn ra muộn hơn trong ngày; lượt tối bắt thêm flash sale công bố trong ngày. Lấy lại trong ngày không làm mất flash sale đã ghi nhận trước đó.
 
 **Các cột số lượng bán:**
 
@@ -65,7 +65,7 @@ Làm ngay trên web, ở mục **Danh mục theo dõi** (cuối trang). Không c
 | ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
 | Danh sách đối thủ chính                    | `config/tracking.json` → `competitorBrands`                                                     |
 | Khoảng giá "cùng tầm giá" (mặc định ±20%) | `config/tracking.json` → `segment.priceTolerancePercent`                                        |
-| Giờ tự lấy dữ liệu trên Cloudflare        | `wrangler.jsonc` (mục `crons`) **và** `DAILY_CRON` trong `src/worker/index.ts`. Giờ ghi theo UTC = giờ VN − 7 |
+| Giờ tự lấy dữ liệu trên Cloudflare        | `wrangler.jsonc` (mục `crons`) **và** `START_CRONS` trong `src/worker/index.ts`. Giờ ghi theo UTC = giờ VN − 7 |
 
 Sửa xong thì deploy lại (mục 5). Danh mục mới thêm vào mục `categories` trong `config/tracking.json` sẽ tự xuất hiện trên web sau khi deploy; danh mục đã xoá trên web không bị thêm lại. Danh mục luôn được sắp xếp theo tên A→Z (cả sheet Excel lẫn trên web).
 
@@ -104,7 +104,7 @@ npx wrangler secret put AUTH_PASSWORD    # mật khẩu web
 npm run cf:deploy
 ```
 
-Gói miễn phí của Cloudflare chỉ cho mỗi lần chạy rất ít thời gian xử lý, nên hệ thống lấy dữ liệu theo **từng trang** (50 sản phẩm một lần). Từ 8:17 sáng, mỗi phút lấy 1 trang, với 22 danh mục thường xong trong khoảng 9:00–9:30. File Excel được tạo ngay trên trình duyệt.
+Gói miễn phí của Cloudflare chỉ cho mỗi lần chạy rất ít thời gian xử lý, nên hệ thống lấy dữ liệu theo **từng trang** (50 sản phẩm một lần). Từ 8:17 sáng và 22:17 tối, mỗi phút lấy 1 trang, với 22 danh mục mỗi lượt thường xong sau khoảng 45–75 phút. File Excel được tạo ngay trên trình duyệt.
 
 </details>
 
@@ -126,7 +126,7 @@ npm run dev                 # mở http://localhost:3000, tự tải lại khi s
 | `npm run typecheck`               | Kiểm tra lỗi TypeScript                    |
 | `npm run format`                  | Định dạng code (VS Code tự làm khi lưu)    |
 
-Bản trên máy lưu dữ liệu vào `data/market.db`, tự lấy dữ liệu theo `CRAWL_CRON` trong `.env` (mặc định 8:17 sáng) nếu máy đang bật.
+Bản trên máy lưu dữ liệu vào `data/market.db`, tự lấy dữ liệu theo `CRAWL_CRON` trong `.env` (mặc định 8:17 sáng và 22:17 tối) nếu máy đang bật.
 
 ### Code nằm ở đâu
 

@@ -285,7 +285,7 @@
     todayEl.classList.toggle('over', manualToday >= 3);
     todayEl.textContent =
       manualToday >= 3
-        ? `Hôm nay đã bấm ${manualToday} lần – nên dừng, để lượt tự động sáng mai lấy tiếp.`
+        ? `Hôm nay đã bấm ${manualToday} lần – nên dừng, để lượt tự động lấy tiếp.`
         : `Hôm nay đã bấm ${manualToday} lần.`;
 
     const crawlBtn = $('#crawl-btn');

@@ -95,13 +95,21 @@ const UPSERT_PRODUCTS_SQL = `
     last_seen_date = MAX(products.last_seen_date, excluded.last_seen_date),
     updated_at = datetime('now')`;
 
+/** Các cột flash sale: được giữ lại nếu lần lấy sau trong cùng ngày không còn thấy flash sale. */
+const FLASH_COLUMNS = ['flash_price', 'flash_start', 'flash_end', 'flash_hours', 'flash_quota'];
+
 const UPSERT_SNAPSHOTS_SQL = `
   INSERT INTO price_snapshots (${SNAPSHOT_COLUMNS.map(([, c]) => c).join(', ')})
   SELECT ${SNAPSHOT_COLUMNS.map(([f]) => (f === 'crawlDate' ? '?2' : jsonField(f))).join(', ')}
   FROM json_each(?1) j WHERE true
   ON CONFLICT(crawl_date, product_code) DO UPDATE SET
     ${SNAPSHOT_COLUMNS.filter(([, c]) => c !== 'crawl_date' && c !== 'product_code')
-      .map(([, c]) => `${c} = excluded.${c}`)
+      .map(([, c]) =>
+        FLASH_COLUMNS.includes(c)
+          ? // Lấy lại trong ngày mà lúc đó không còn flash sale → GIỮ flash sale đã ghi nhận trước đó trong ngày
+            `${c} = CASE WHEN excluded.flash_price IS NULL THEN price_snapshots.${c} ELSE excluded.${c} END`
+          : `${c} = excluded.${c}`,
+      )
       .join(',\n    ')}`;
 
 export class SqlStore {
