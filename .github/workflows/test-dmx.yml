@@ -1,0 +1,26 @@
+# Workflow thử nghiệm: kiểm tra máy chủ GitHub (IP nước ngoài) có gọi được API Điện Máy Xanh không.
+name: Thử kết nối ĐMX
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - .github/workflows/test-dmx.yml
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: IP của máy chạy
+        run: curl -s https://ipinfo.io/json || true
+      - name: Gọi API danh mục ĐMX
+        run: |
+          for slug in chao-chong-dinh binh-dun-sieu-toc; do
+            curl -s -o out.json -w "HTTP %{http_code} – ${slug}\n" \
+              -X POST 'https://api.dienmayxanh.com/gw/bus-dmx-tmdt/api/Cate/GetproductCateV2' \
+              -H 'Content-Type: application/json' -H 'os: WebDMX' -H 'platform: 1' -H 'siteid: 2' -H 'provinceid: 1027' \
+              -H 'User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36' \
+              -H 'Origin: https://www.dienmayxanh.com' -H 'Referer: https://www.dienmayxanh.com/' \
+              --data "{\"pageIndex\":0,\"pageSize\":50,\"provinceId\":1027,\"urlCate\":\"${slug}\",\"cateId\":\"\",\"filters\":[]}"
+            node -e "const j=JSON.parse(require('fs').readFileSync('out.json','utf8'));console.log('code',j.code,'| SP trang đầu:',j.data?.products?.length,'| tổng:',j.data?.totalProduct,'| SP đầu:',j.data?.products?.[0]?.name)" || head -c 500 out.json
+            sleep 2
+          done
