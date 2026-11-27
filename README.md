@@ -118,34 +118,41 @@ Dòng của Elmich có nền **xanh lá nhạt**. Dòng nền **cam nhạt** là
 
 ```
 src/
-├─ config/        env.ts (.env, validate bằng zod) · tracking.ts (config/tracking.json)
+├─ config/        env.ts (.env, zod) · tracking.ts (parse config) · trackingLoader.ts (đọc file, chỉ Node)
 ├─ domain/        types.ts – mô hình dữ liệu chung (Product, PriceSnapshot, CrawlRun)
 ├─ crawler/
 │  ├─ dmx/        client.ts (gọi API ĐMX, phân trang, retry) · schema.ts (zod) · normalize.ts (JSON → domain)
-│  └─ crawlService.ts – điều phối 1 lượt cào, lưu DB, cảnh báo bất thường
-├─ db/            database.ts (node:sqlite + migration) · repositories/ (products, snapshots, crawl_runs)
+│  └─ crawlEngine.ts – cào THEO TỪNG BƯỚC (mỗi bước 1 trang), tiến độ lưu ở bảng crawl_jobs
+├─ db/            sql.ts (interface SqlDriver + driver node:sqlite) · sqlStore.ts (TOÀN BỘ câu SQL) · migrations.ts
+├─ api/           handlers.ts – API dùng chung cho Express (Node) và Cloudflare Worker
 ├─ report/
 │  ├─ period.ts   tính kỳ tuần/tháng
-│  ├─ analysis.ts TOÀN BỘ logic phân tích (hàm thuần, có test)
+│  ├─ analysis.ts · market.ts – TOÀN BỘ logic phân tích (hàm thuần, có test)
 │  ├─ excel/      tableSheet.ts (helper tạo sheet) · columns.ts (bộ cột dùng lại) · sheets/ · workbook.ts
-│  └─ reportService.ts – DB → analysis → Excel
-├─ web/           app.ts (Express) · auth.ts (Basic Auth) · routes/api.ts
+│  └─ reportBuilder.ts – nguồn dữ liệu → analysis (dùng cho cả CLI và trình duyệt)
+├─ client/        report.ts – tạo Excel NGAY TRÊN TRÌNH DUYỆT (esbuild → public/report.bundle.js)
+├─ worker/        index.ts (Cloudflare Worker: web + cron) · d1Driver.ts · auth.ts
+├─ web/           app.ts (Express) · auth.ts (Basic Auth) · diag.ts
 ├─ jobs/          scheduler.ts (node-cron)
 ├─ cli/           crawl.ts · export.ts
-├─ container.ts   composition root – nơi duy nhất khởi tạo & nối các thành phần
-└─ index.ts       khởi động server
-public/           giao diện web (HTML/JS thuần, không cần build)
-tests/            unit test (node:test), fixtures/ = JSON thật từ API ĐMX
+├─ container.ts   composition root cho bản Node
+└─ index.ts       khởi động server Node
+public/           giao diện web (HTML/CSS/JS thuần)
+scripts/          gen-d1-migrations.ts · export-d1-data.ts (cho Cloudflare)
+cloudflare/       migrations/ – file SQL cho D1, sinh tự động từ src/db/migrations.ts
+tests/            unit test (node:test), fixtures/ = JSON thật từ API ĐMX, fakeD1.ts = giả lập D1
 ```
 
-**Luồng dữ liệu:** `node-cron` → `CrawlService` → `DmxClient` (API ĐMX) → `normalize` → SQLite (`products`, `price_snapshots`).
-Khi bấm xuất: `ReportService` → `analysis` → `excel/workbook` → tải file về.
+**Luồng dữ liệu:** lịch (node-cron hoặc Cloudflare Cron) / nút "Lấy data hôm nay" → `CrawlEngine.start` tạo job trang đầu cho mỗi danh mục → mỗi `step()` lấy 1 trang qua `DmxClient` → `normalize` → `SqlStore` (SQLite trên máy hoặc D1 trên Cloudflare).
+Khi bấm xuất: trình duyệt tải dữ liệu qua `/api/report/*` → `reportBuilder` + `analysis` → `excel/workbook` → tải file về.
+Cùng một code chạy được trên **Node** (máy cá nhân / VPS) và **Cloudflare Workers**.
 
 **Bảng dữ liệu:**
 
 - `products`: 1 dòng/SKU, có `first_seen_date` và `last_seen_date`.
 - `price_snapshots`: 1 dòng/SKU/ngày. Cào lại trong ngày sẽ ghi đè, không nhân đôi.
 - `crawl_runs`: nhật ký mỗi lượt cào (trạng thái, số SP, cảnh báo, lỗi).
+- `crawl_jobs`: các trang cần cào của mỗi lượt (chờ / đang chạy / xong / lỗi, số lần thử).
 
 ### Hướng dẫn bảo trì nhanh
 
@@ -156,7 +163,7 @@ Khi bấm xuất: `ReportService` → `analysis` → `excel/workbook` → tải 
 | Thêm sheet mới                                             | viết hàm `addXxxSheet` rồi thêm vào mảng `SHEETS` trong `excel/workbook.ts`                                                 |
 | Đổi quy tắc chọn đối thủ cùng tầm giá / định nghĩa SP mới… | `src/report/analysis.ts` (`findCompetitors`, + test trong `tests/report.test.ts`)                                           |
 | Trích mã model / kích thước sai                            | `src/utils/text.ts` (+ `tests/text.test.ts`)                                                                                |
-| Thêm trường dữ liệu mới từ ĐMX                             | `crawler/dmx/schema.ts` → `normalize.ts` → `domain/types.ts` → thêm **migration mới** trong `db/migrations.ts` → repository |
+| Thêm trường dữ liệu mới từ ĐMX                             | `crawler/dmx/schema.ts` → `normalize.ts` → `domain/types.ts` → thêm **migration mới** trong `db/migrations.ts` (rồi `npm run cf:migrations`) → `db/sqlStore.ts` |
 | Theo dõi thêm sàn khác (TGDĐ, Shopee…)                     | viết client + normalize mới trả về `CrawledProduct`; phần DB/báo cáo dùng lại được                                          |
 
 ### Khi ĐMX thay đổi API
@@ -165,7 +172,46 @@ Crawler validate JSON bằng zod. Nếu ĐMX đổi cấu trúc, lượt cào s�
 
 Cách tìm API mới: mở trang danh mục bằng Chrome, mở DevTools → tab **Network** → lọc **Fetch/XHR** → bấm "Xem thêm" để thấy request mới. Sau đó cập nhật `DMX_CATEGORY_API`, body hoặc header trong `crawler/dmx/client.ts`, và cập nhật `schema.ts`.
 
-## 6. Deploy lên VPS (Ubuntu)
+## 6. Chạy miễn phí trên Cloudflare (khuyên dùng)
+
+Cloudflare Workers gói free: web có link riêng `https://elmich-monitor.<tên>.workers.dev`, database D1 500 MB, cron tự chạy, **không cần bật máy**.
+Gói free giới hạn ~10 ms CPU mỗi lần chạy, nên:
+
+- Cào **theo từng bước**: cron chạy mỗi phút trong khung 6:00–6:59 sáng (giờ VN), mỗi lần lấy 1 trang (50 SP). Toàn bộ 9 danh mục xong trong khoảng 15–25 phút.
+- Nút "Lấy data hôm nay": trình duyệt gọi lần lượt từng bước và hiện tiến độ. Đóng trang giữa chừng cũng không sao, cron 10 phút một lần sẽ làm tiếp phần còn lại.
+- File Excel được **tạo trên trình duyệt** (`public/report.bundle.js`), máy chủ chỉ trả dữ liệu thô.
+
+### Lần đầu (làm trên máy cá nhân, chỉ 1 lần)
+
+```bash
+npm install
+npx wrangler login                       # mở trình duyệt để đăng nhập Cloudflare
+npx wrangler d1 create elmich-monitor    # copy "database_id" in ra, dán vào wrangler.jsonc
+npm run cf:migrate                       # tạo bảng trên D1
+npx wrangler secret put AUTH_USER        # tên đăng nhập web
+npx wrangler secret put AUTH_PASSWORD    # mật khẩu web
+npm run cf:deploy                        # build + deploy, in ra link web
+```
+
+Chép dữ liệu đã cào trên máy (`data/market.db`) lên D1 (không bắt buộc):
+
+```bash
+npm run cf:export-data     # → data/d1-import.sql
+npm run cf:import-data     # nạp lên D1, chạy lại nhiều lần không bị trùng
+```
+
+### Khi sửa code
+
+| Thay đổi                       | Lệnh                                              |
+| ------------------------------ | ------------------------------------------------- |
+| Sửa code / giao diện           | `npm run cf:deploy`                               |
+| Thêm migration trong `db/`     | `npm run cf:migrations` → `npm run cf:migrate`    |
+| Xem log trực tiếp              | `npx wrangler tail`                               |
+| Chạy thử bản Worker trên máy   | `npm run cf:dev`                                  |
+
+Không đặt secret (`AUTH_USER`, `AUTH_PASSWORD`) thì web trả lỗi 503 thay vì mở công khai.
+
+## 7. Deploy lên VPS (Ubuntu)
 
 ```bash
 # 1. Cài Node 24 + pm2
@@ -207,7 +253,7 @@ docker run -d --name market-monitoring --restart unless-stopped \
 
 > Nên dùng VPS đặt tại Việt Nam: IP Việt Nam giống người dùng thật hơn và ít bị ĐMX chặn hơn. Chỉ chạy **1 instance** để tránh cào trùng và tranh chấp ghi SQLite.
 
-## 7. Lưu ý sử dụng
+## 8. Lưu ý sử dụng
 
 - Hệ thống chỉ đọc **dữ liệu công khai** (không đăng nhập), tốc độ thấp (nghỉ 2 giây giữa các request, mỗi ngày một lượt). Nên đọc điều khoản sử dụng của ĐMX và giữ tần suất hợp lý.
 - "Đã bán" là con số ĐMX hiển thị công khai, chỉ dùng để tham khảo **xu hướng**, không phải doanh số thực.

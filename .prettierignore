@@ -5,3 +5,6 @@ reports/
 coverage/
 package-lock.json
 *.db
+public/report.bundle.js
+.wrangler/
+cloudflare/migrations/

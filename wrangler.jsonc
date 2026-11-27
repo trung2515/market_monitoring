@@ -1,0 +1,39 @@
+// Cấu hình Cloudflare Workers – xem hướng dẫn deploy trong README (mục "Chạy miễn phí trên Cloudflare").
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "elmich-monitor",
+  "main": "src/worker/index.ts",
+  "compatibility_date": "2026-11-01",
+
+  // Web tĩnh trong public/. run_worker_first: mọi request đi qua Worker trước để kiểm tra đăng nhập.
+  "assets": {
+    "directory": "./public",
+    "binding": "ASSETS",
+    "run_worker_first": true
+  },
+
+  // Database D1. Sau khi chạy `npx wrangler d1 create elmich-monitor`, dán database_id vào đây.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "elmich-monitor",
+      "database_id": "THAY_BANG_DATABASE_ID",
+      "migrations_dir": "cloudflare/migrations"
+    }
+  ],
+
+  // Giờ UTC. "* 23 * * *" = mỗi phút từ 6:00 đến 6:59 sáng giờ VN: bắt đầu lượt cào hằng ngày,
+  // mỗi phút xử lý 1 trang. "*/10 0-22 * * *" = 10 phút một lần trong ngày: làm tiếp lượt cào dang dở
+  // (vd bấm "Lấy data hôm nay" rồi đóng trang). Gói free cho tối đa 5 cron mỗi tài khoản.
+  "triggers": {
+    "crons": ["* 23 * * *", "*/10 0-22 * * *"]
+  },
+
+  "vars": {
+    "TIMEZONE": "Asia/Ho_Chi_Minh",
+    "DMX_PROVINCE_ID": "1027",
+    "LOG_LEVEL": "info"
+  },
+
+  "observability": { "enabled": true }
+}

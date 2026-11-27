@@ -162,18 +162,21 @@
     if (cats.length) params.set('categories', cats.join(','));
     if (brands.length) params.set('brands', brands.join(','));
 
-    setBusy(btn, true, 'Đang tạo file…');
+    setBusy(btn, true, 'Đang chuẩn bị…');
     setMsg(msg, '');
     try {
-      const res = await api(`/api/export?${params}`);
-      const blob = await res.blob();
-      const disposition = res.headers.get('Content-Disposition') || '';
-      const name = decodeURIComponent((disposition.match(/filename\*=UTF-8''([^;]+)/) || [])[1] || 'BaoCao.xlsx');
-      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      URL.revokeObjectURL(a.href);
+      if (!window.MarketReport) throw new Error('Thiếu file report.bundle.js – hãy chạy "npm run build:client".');
+      const name = await window.MarketReport.download(
+        {
+          period: currentPeriod(),
+          date: params.get('date') || undefined,
+          from: params.get('from') || undefined,
+          to: params.get('to') || undefined,
+          categories: cats,
+          brands,
+        },
+        (text) => (btn.querySelector('.btn-text').textContent = text),
+      );
       setMsg(msg, `Đã tải ${name}`, 'ok');
     } catch (err) {
       setMsg(msg, err.message, 'err');
@@ -185,7 +188,6 @@
   // ---------- Trạng thái & lấy dữ liệu ----------
   const STATUS_LABEL = { success: 'Thành công', partial: 'Một phần', failed: 'Lỗi', running: 'Đang chạy' };
   const TRIGGER_LABEL = { schedule: 'Tự động', manual: 'Bấm tay', cli: 'Dòng lệnh' };
-  let pollTimer = null;
 
   async function loadStatus() {
     const s = (state.status = await (await api('/api/status')).json());
@@ -224,31 +226,44 @@
         .join('') || '<li><span class="empty">Chưa có lần nào.</span></li>';
 
     const crawlBtn = $('#crawl-btn');
-    setBusy(crawlBtn, s.running, s.running ? 'Đang lấy dữ liệu…' : 'Lấy data hôm nay');
-    if (s.running && !pollTimer) {
-      pollTimer = setInterval(async () => {
-        const st = await (await api('/api/status')).json();
-        if (!st.running) {
-          clearInterval(pollTimer);
-          pollTimer = null;
-          setMsg($('#crawl-msg'), 'Đã lấy xong dữ liệu.', 'ok');
-          await Promise.all([loadStatus(), loadOptions(), loadPreview()]);
-        }
-      }, 5000);
+    if (!crawling) {
+      setBusy(crawlBtn, false, s.running ? 'Tiếp tục lấy dữ liệu' : 'Lấy data hôm nay');
+      if (s.running && s.progress) setMsg($('#crawl-msg'), progressText(s.progress), '');
     }
     updatePeriodUi();
   }
 
+  const progressText = (p) =>
+    `Đang lấy dữ liệu: ${p.doneJobs}/${Math.max(p.totalJobs, p.doneJobs)} trang, ${p.productCount.toLocaleString('vi-VN')} sản phẩm…`;
+  let crawling = false;
+
+  // Bấm nút → tạo lượt cào rồi gọi lặp từng bước (mỗi bước 1 trang) tới khi xong.
+  // Nếu đóng trang giữa chừng, hệ thống sẽ tự làm tiếp phần còn lại theo lịch.
   $('#crawl-btn').addEventListener('click', async () => {
     const msg = $('#crawl-msg');
+    const btn = $('#crawl-btn');
+    if (crawling) return;
+    crawling = true;
+    setBusy(btn, true, 'Đang lấy dữ liệu…');
     try {
-      const res = await api('/api/crawl', { method: 'POST' });
-      setMsg(msg, (await res.json()).message, 'ok');
-      await loadStatus();
+      const start = await (await api('/api/crawl', { method: 'POST' })).json();
+      setMsg(msg, start.progress ? progressText(start.progress) : start.message, '');
+      for (let i = 0; i < 500; i++) {
+        const step = await (await api('/api/crawl/step', { method: 'POST' })).json();
+        if (step.progress) setMsg(msg, progressText(step.progress), '');
+        if (step.finished) break;
+        if (!step.worked) await new Promise((r) => setTimeout(r, 2000));
+      }
+      setMsg(msg, 'Đã lấy xong dữ liệu.', 'ok');
     } catch (err) {
-      setMsg(msg, err.message, 'err');
+      setMsg(msg, `${err.message}. Bấm lại để tiếp tục.`, 'err');
+    } finally {
+      crawling = false;
+      setBusy(btn, false, 'Lấy data hôm nay');
+      await Promise.all([loadStatus(), loadOptions(), loadPreview()]).catch(() => {});
     }
   });
+
 
   // ---------- Bảng giá ----------
   let searchTimer;

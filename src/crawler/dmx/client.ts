@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { jitter, sleep } from '../../utils/async';
 import type { Logger } from '../../utils/logger';
 import { dmxCategoryResponseSchema, dmxProductSchema, type DmxProduct } from './schema';
@@ -14,6 +13,17 @@ export interface DmxClientOptions {
   logger: Logger;
   /** Cho phép thay fetch khi test */
   fetchImpl?: typeof fetch;
+}
+
+export interface DmxPage {
+  products: DmxProduct[];
+  /** Số sản phẩm thô API trả về (kể cả bản ghi sai cấu trúc) */
+  rawCount: number;
+  invalidCount: number;
+  categoryName: string;
+  totalReported: number;
+  /** Số sản phẩm còn lại sau trang này */
+  remaining: number;
 }
 
 export interface DmxCategoryResult {
@@ -46,7 +56,8 @@ const MAX_PAGES = 200;
  * Chỉ đọc dữ liệu công khai (không đăng nhập), có nghỉ giữa các request và retry có backoff.
  */
 export class DmxClient {
-  private readonly deviceId = randomUUID();
+  /** crypto.randomUUID có sẵn trong Node ≥ 19, trình duyệt và Cloudflare Workers */
+  private readonly deviceId = globalThis.crypto.randomUUID();
   private readonly fetchImpl: typeof fetch;
 
   constructor(private readonly opts: DmxClientOptions) {
@@ -80,7 +91,8 @@ export class DmxClient {
     return { slug, categoryName, totalReported, products: [...seen.values()], invalidCount };
   }
 
-  private async fetchPage(slug: string, pageIndex: number) {
+  /** Lấy 1 trang của danh mục (dùng khi cào theo từng bước – Cloudflare Workers giới hạn CPU mỗi lần chạy). */
+  async fetchPage(slug: string, pageIndex: number): Promise<DmxPage> {
     const body = {
       pageIndex,
       pageSize: this.opts.pageSize,

@@ -4,10 +4,12 @@ import { createContext } from '../container';
 async function main(): Promise<void> {
   const ctx = createContext();
   try {
-    const summary = await ctx.crawlService.run('cli');
-    console.table(summary.categories.map((c) => ({ 'Danh mục': c.name, 'Số SP': c.productCount, Lỗi: c.error ?? '' })));
-    summary.warnings.forEach((w) => console.warn(`⚠ ${w}`));
-    process.exitCode = summary.status === 'failed' ? 1 : 0;
+    const run = await ctx.engine.runToCompletion('cli', ctx.env.DMX_REQUEST_DELAY_MS);
+    const results = await ctx.store.categoryResults(run.id);
+    console.table(results.map((c) => ({ 'Danh mục': c.categoryName, 'Số SP': c.productCount, Lỗi: c.error ?? '' })));
+    run.warnings.forEach((w) => console.warn(`⚠ ${w}`));
+    console.log(`Kết quả: ${run.status}, ${run.productCount} sản phẩm (ngày ${run.crawlDate})`);
+    process.exitCode = run.status === 'failed' ? 1 : 0;
   } finally {
     ctx.close();
   }

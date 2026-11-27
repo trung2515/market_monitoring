@@ -2,10 +2,10 @@ import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
 import { parseTrackingConfig } from '../src/config/tracking';
 import { openDatabase } from '../src/db/database';
-import { ProductRepository } from '../src/db/repositories/productRepository';
-import { SnapshotRepository } from '../src/db/repositories/snapshotRepository';
+import { NodeSqliteDriver } from '../src/db/sql';
+import { SqlStore } from '../src/db/sqlStore';
 import type { PriceSnapshot, Product } from '../src/domain/types';
-import { ReportService } from '../src/report/reportService';
+import { buildReportData, type ReportRequest } from '../src/report/reportBuilder';
 import { duration, flashWindow, makeBands } from '../src/report/market';
 
 const makeTracking = (segment: Record<string, unknown> = {}) =>
@@ -61,13 +61,12 @@ function snap(date: string, code: string, price: number, totalRate: number): Pri
   };
 }
 
-function setup(segment: Record<string, unknown> = {}) {
+async function setup(segment: Record<string, unknown> = {}) {
   const db = openDatabase(':memory:');
-  const products = new ProductRepository(db);
-  const snapshots = new SnapshotRepository(db);
+  const store = new SqlStore(new NodeSqliteDriver(db));
   const save = (date: string, p: Product, price: number, sold: number) => {
-    products.upsert(p, date);
-    snapshots.upsert(snap(date, p.productCode, price, sold));
+    const { crawlDate: _d, ...snapshot } = snap(date, p.productCode, price, sold);
+    return store.saveCrawledPage(date, [{ product: p, snapshot }]);
   };
 
   const elmich = product('E1', 'Elmich', 'Chảo Elmich EL-5753MN');
@@ -77,35 +76,36 @@ function setup(segment: Record<string, unknown> = {}) {
   const tefal = product('T1', 'Tefal', 'Chảo Tefal E2770674');
 
   // Tuần trước (mốc so sánh)
-  save('2026-11-20', elmich, 300000, 100);
-  save('2026-11-20', sun, 280000, 1000);
-  save('2026-11-20', sunGone, 200000, 50);
-  save('2026-11-20', tefal, 320000, 500);
+  await save('2026-11-20', elmich, 300000, 100);
+  await save('2026-11-20', sun, 280000, 1000);
+  await save('2026-11-20', sunGone, 200000, 50);
+  await save('2026-11-20', tefal, 320000, 500);
   // Trong tuần 23–29/11
-  save('2026-11-24', elmich, 300000, 120);
-  save('2026-11-24', sun, 250000, 1100);
-  save('2026-11-24', sunNew, 310000, 5);
-  save('2026-11-24', tefal, 320000, 520);
-  save('2026-11-26', elmich, 290000, 150);
-  save('2026-11-26', sun, 260000, 1200);
-  save('2026-11-26', sunNew, 310000, 20);
-  save('2026-11-26', tefal, 320000, 540);
+  await save('2026-11-24', elmich, 300000, 120);
+  await save('2026-11-24', sun, 250000, 1100);
+  await save('2026-11-24', sunNew, 310000, 5);
+  await save('2026-11-24', tefal, 320000, 520);
+  await save('2026-11-26', elmich, 290000, 150);
+  await save('2026-11-26', sun, 260000, 1200);
+  await save('2026-11-26', sunNew, 310000, 20);
+  await save('2026-11-26', tefal, 320000, 540);
 
-  const service = new ReportService({
-    products,
-    snapshots,
-    tracking: makeTracking(segment),
-    timeZone: 'Asia/Ho_Chi_Minh',
-  });
-  const saveSnap = (date: string, code: string, price: number, sold: number, extra: Partial<PriceSnapshot> = {}) =>
-    snapshots.upsert({ ...snap(date, code, price, sold), ...extra });
+  const tracking = makeTracking(segment);
+  const service = { buildData: (req: ReportRequest) => buildReportData(store, tracking, req, '2026-11-27') };
+  const products = new Map([elmich, sun, sunGone, sunNew, tefal].map((p) => [p.productCode, p]));
+  const saveSnap = (date: string, code: string, price: number, sold: number, extra: Partial<PriceSnapshot> = {}) => {
+    const { crawlDate: _d, ...snapshot } = { ...snap(date, code, price, sold), ...extra };
+    const product = products.get(code);
+    if (!product) throw new Error(code);
+    return store.saveCrawledPage(date, [{ product, snapshot }]);
+  };
   return { db, service, saveSnap };
 }
 
 describe('ReportService', () => {
-  it('phân tích đúng biến động trong tuần', () => {
-    const { service } = setup();
-    const data = service.buildData({ type: 'week', date: '2026-11-26' });
+  it('phân tích đúng biến động trong tuần', async () => {
+    const { service } = await setup();
+    const data = await service.buildData({ type: 'week', date: '2026-11-26' });
 
     assert.equal(data.baselineDate, '2026-11-20');
     assert.equal(data.endDate, '2026-11-26');
@@ -151,9 +151,9 @@ describe('ReportService', () => {
     assert.equal(chao?.ownRows[0]?.competitors[0]?.priceDiffPercent, 6.9); // (310 − 290) / 290
   });
 
-  it('phân tích thị trường: thị phần, bán chạy, phân khúc giá, lịch sử giá', () => {
-    const { service } = setup();
-    const { market } = service.buildData({ type: 'week', date: '2026-11-26' });
+  it('phân tích thị trường: thị phần, bán chạy, phân khúc giá, lịch sử giá', async () => {
+    const { service } = await setup();
+    const { market } = await service.buildData({ type: 'week', date: '2026-11-26' });
 
     // Lượt bán cộng dồn cuối kỳ: Sunhouse 1200+20, Tefal 540, Elmich 150
     assert.deepEqual(
@@ -190,22 +190,22 @@ describe('ReportService', () => {
     assert.equal(market.promotions.length, 4);
   });
 
-  it('lịch flash sale + khuyến mãi khác', () => {
-    const { service, saveSnap } = setup();
-    saveSnap('2026-11-24', 'T1', 320000, 520, {
+  it('lịch flash sale + khuyến mãi khác', async () => {
+    const { service, saveSnap } = await setup();
+    await saveSnap('2026-11-24', 'T1', 320000, 520, {
       flashPrice: 250000,
       flashStart: '2026-11-24 00:00',
       flashEnd: '2026-11-24 23:59',
     });
-    saveSnap('2026-11-26', 'T1', 320000, 540, {
+    await saveSnap('2026-11-26', 'T1', 320000, 540, {
       discountPercent: 0,
       flashPrice: 260000,
       flashStart: '2026-11-26 09:00',
       flashEnd: '2026-11-26 11:59',
       flashQuota: 20,
     });
-    saveSnap('2026-11-26', 'S3', 310000, 20, { discountPercent: 0, giftText: 'Mua 1 tặng: Bộ dao 3 món' });
-    const { market } = service.buildData({ type: 'week', date: '2026-11-26' });
+    await saveSnap('2026-11-26', 'S3', 310000, 20, { discountPercent: 0, giftText: 'Mua 1 tặng: Bộ dao 3 món' });
+    const { market } = await service.buildData({ type: 'week', date: '2026-11-26' });
 
     assert.deepEqual(
       market.flashCalendar.rows.map((r) => [r.product.productCode, r.flash, r.flashDays, r.minFlash]),
@@ -218,7 +218,7 @@ describe('ReportService', () => {
     assert.ok(market.promotions.some((p) => p.product.productCode === 'S3'));
   });
 
-  it('tính thời lượng flash sale', () => {
+  it('tính thời lượng flash sale', async () => {
     assert.equal(duration('2026-11-26 00:00', '2026-11-26 23:59'), '1 ngày');
     assert.equal(duration('2026-11-26 00:00', '2026-11-28 23:59'), '3 ngày');
     assert.equal(duration('2026-11-26 09:00', '2026-11-26 11:59'), '3 giờ');
@@ -226,7 +226,7 @@ describe('ReportService', () => {
     assert.equal(duration(null, '2026-11-26 11:59'), null);
   });
 
-  it('hiển thị gọn thời gian flash sale', () => {
+  it('hiển thị gọn thời gian flash sale', async () => {
     assert.equal(flashWindow('2026-11-27 00:00', '2026-11-27 23:59'), 'Cả ngày 27/11');
     assert.equal(flashWindow('2026-11-27 09:00', '2026-11-27 11:59'), '27/11 09:00–11:59');
     assert.equal(flashWindow('2026-11-27 00:00', '2026-11-29 23:59'), '27/11 → 29/11');
@@ -234,68 +234,68 @@ describe('ReportService', () => {
     assert.equal(flashWindow(null, null), null);
   });
 
-  it('chia khoảng giá', () => {
+  it('chia khoảng giá', async () => {
     assert.deepEqual(
       makeBands([400_000, 200_000, 1_500_000]).map((b) => b.label),
       ['Dưới 200k', '200k – 400k', '400k – 1.5tr', 'Từ 1.5tr'],
     );
   });
 
-  it('ô trống trong lịch sử giá khi có ngày không cào được', () => {
-    const { service, saveSnap } = setup();
-    saveSnap('2026-11-25', 'S1', 255000, 1150); // chỉ S1 có dữ liệu ngày 25
-    const { market } = service.buildData({ type: 'week', date: '2026-11-26' });
+  it('ô trống trong lịch sử giá khi có ngày không cào được', async () => {
+    const { service, saveSnap } = await setup();
+    await saveSnap('2026-11-25', 'S1', 255000, 1150); // chỉ S1 có dữ liệu ngày 25
+    const { market } = await service.buildData({ type: 'week', date: '2026-11-26' });
     assert.deepEqual(market.history.dates, ['2026-11-24', '2026-11-25', '2026-11-26']);
     const e1 = market.history.rows.find((r) => r.product.productCode === 'E1');
     assert.deepEqual(e1?.prices, [300000, null, 290000]);
   });
 
-  it('chỉ so với đối thủ trong danh sách khi bật onlyListedCompetitors', () => {
-    const { service } = setup({ onlyListedCompetitors: true });
-    const data = service.buildData({ type: 'week', date: '2026-11-26' });
+  it('chỉ so với đối thủ trong danh sách khi bật onlyListedCompetitors', async () => {
+    const { service } = await setup({ onlyListedCompetitors: true });
+    const data = await service.buildData({ type: 'week', date: '2026-11-26' });
     assert.deepEqual(
       data.categories[0]?.ownRows[0]?.competitors.map((c) => c.competitor.product.brand),
       ['Sunhouse', 'Sunhouse'],
     );
   });
 
-  it('không lấy đối thủ ngoài tầm giá', () => {
-    const { service } = setup({ priceTolerancePercent: 5 });
-    const data = service.buildData({ type: 'week', date: '2026-11-26' });
+  it('không lấy đối thủ ngoài tầm giá', async () => {
+    const { service } = await setup({ priceTolerancePercent: 5 });
+    const data = await service.buildData({ type: 'week', date: '2026-11-26' });
     assert.deepEqual(
       data.categories[0]?.ownRows[0]?.competitors.map((c) => c.competitor.product.productCode),
       [],
     );
   });
 
-  it('lọc theo thương hiệu', () => {
-    const { service } = setup();
-    const data = service.buildData({ type: 'week', date: '2026-11-26', filter: { brands: ['tefal'] } });
+  it('lọc theo thương hiệu', async () => {
+    const { service } = await setup();
+    const data = await service.buildData({ type: 'week', date: '2026-11-26', filter: { brands: ['tefal'] } });
     assert.deepEqual(
       data.current.map((c) => c.product.brand),
       ['Tefal'],
     );
   });
 
-  it('kỳ không có dữ liệu', () => {
-    const { service } = setup();
-    const data = service.buildData({ type: 'month', date: '2025-01-15' });
+  it('kỳ không có dữ liệu', async () => {
+    const { service } = await setup();
+    const data = await service.buildData({ type: 'month', date: '2025-01-15' });
     assert.equal(data.endDate, null);
     assert.equal(data.current.length, 0);
     assert.ok(data.notes.length > 0);
   });
 
-  it('lần cào đầu tiên của hệ thống không bị tính là SP mới', () => {
-    const { service } = setup();
-    const data = service.buildData({ type: 'custom', from: '2026-11-20', to: '2026-11-20' });
+  it('lần cào đầu tiên của hệ thống không bị tính là SP mới', async () => {
+    const { service } = await setup();
+    const data = await service.buildData({ type: 'custom', from: '2026-11-20', to: '2026-11-20' });
     assert.equal(data.newProducts.length, 0);
   });
 
-  it('dựng được workbook đủ sheet', { skip: !hasExcelJs() && 'chưa cài exceljs' }, () => {
+  it('dựng được workbook đủ sheet', { skip: !hasExcelJs() && 'chưa cài exceljs' }, async () => {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const { buildWorkbook } = require('../src/report/excel/workbook') as typeof import('../src/report/excel/workbook');
-    const { service } = setup();
-    const wb = buildWorkbook(service.buildData({ type: 'week', date: '2026-11-26' }));
+    const { service } = await setup();
+    const wb = buildWorkbook(await service.buildData({ type: 'week', date: '2026-11-26' }));
     assert.deepEqual(
       wb.worksheets.map((w) => w.name),
       [

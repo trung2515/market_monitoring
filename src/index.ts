@@ -7,9 +7,6 @@ function main(): void {
   const ctx = createContext();
   const { env, logger } = ctx;
 
-  const stale = ctx.repos.runs.failStaleRuns();
-  if (stale > 0) logger.warn(`Đánh dấu ${stale} lượt cào bị gián đoạn trước đó là thất bại`);
-
   const scheduler = startScheduler(ctx);
   const server = createApp(ctx).listen(env.PORT, () => {
     logger.info(`Web đang chạy tại http://localhost:${env.PORT}`);

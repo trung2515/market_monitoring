@@ -1,30 +1,26 @@
+import { createApi, type Api } from './api/handlers';
 import { loadEnv, type Env } from './config/env';
-import { loadTrackingConfig, type TrackingConfig } from './config/tracking';
-import { CrawlService } from './crawler/crawlService';
+import type { TrackingConfig } from './config/tracking';
+import { loadTrackingConfig } from './config/trackingLoader';
+import { CrawlEngine } from './crawler/crawlEngine';
 import { DmxClient } from './crawler/dmx/client';
 import { openDatabase, type Database } from './db/database';
-import { CrawlRunRepository } from './db/repositories/crawlRunRepository';
-import { ProductRepository } from './db/repositories/productRepository';
-import { SnapshotRepository } from './db/repositories/snapshotRepository';
-import { ReportService } from './report/reportService';
+import { NodeSqliteDriver } from './db/sql';
+import { SqlStore } from './db/sqlStore';
 import { createLogger, type Logger } from './utils/logger';
 
 /**
- * Composition root: nơi DUY NHẤT khởi tạo & nối các thành phần với nhau.
- * Các module khác chỉ nhận phụ thuộc qua constructor → dễ test, dễ thay thế.
+ * Composition root cho bản chạy trên Node (máy tính / VPS): nơi DUY NHẤT khởi tạo & nối các thành phần.
+ * Bản Cloudflare có composition root riêng ở src/worker/index.ts, dùng chung các thành phần còn lại.
  */
 export interface AppContext {
   env: Env;
   tracking: TrackingConfig;
   logger: Logger;
   db: Database;
-  repos: {
-    products: ProductRepository;
-    snapshots: SnapshotRepository;
-    runs: CrawlRunRepository;
-  };
-  crawlService: CrawlService;
-  reportService: ReportService;
+  store: SqlStore;
+  engine: CrawlEngine;
+  api: Api;
   close(): void;
 }
 
@@ -33,12 +29,7 @@ export function createContext(overrides: Partial<Pick<AppContext, 'env' | 'track
   const tracking = overrides.tracking ?? loadTrackingConfig(env.TRACKING_CONFIG);
   const logger = createLogger(env.LOG_LEVEL);
   const db = openDatabase(env.DB_PATH);
-
-  const repos = {
-    products: new ProductRepository(db),
-    snapshots: new SnapshotRepository(db),
-    runs: new CrawlRunRepository(db),
-  };
+  const store = new SqlStore(new NodeSqliteDriver(db));
 
   const client = new DmxClient({
     provinceId: env.DMX_PROVINCE_ID,
@@ -49,22 +40,8 @@ export function createContext(overrides: Partial<Pick<AppContext, 'env' | 'track
     logger: logger.child('dmx'),
   });
 
-  const crawlService = new CrawlService({
-    db,
-    client,
-    ...repos,
-    tracking,
-    timeZone: env.TIMEZONE,
-    delayMs: env.DMX_REQUEST_DELAY_MS,
-    logger: logger.child('crawl'),
-  });
+  const engine = new CrawlEngine({ store, client, tracking, timeZone: env.TIMEZONE, logger: logger.child('crawl') });
+  const api = createApi({ store, engine, tracking });
 
-  const reportService = new ReportService({
-    products: repos.products,
-    snapshots: repos.snapshots,
-    tracking,
-    timeZone: env.TIMEZONE,
-  });
-
-  return { env, tracking, logger, db, repos, crawlService, reportService, close: () => db.close() };
+  return { env, tracking, logger, db, store, engine, api, close: () => db.close() };
 }

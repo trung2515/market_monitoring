@@ -82,4 +82,25 @@ export const migrations: { id: number; name: string; sql: string }[] = [
       ALTER TABLE price_snapshots ADD COLUMN other_promos TEXT;
     `,
   },
+  {
+    id: 4,
+    name: 'crawl_jobs',
+    sql: `
+      CREATE TABLE crawl_jobs (
+        id            INTEGER PRIMARY KEY AUTOINCREMENT,
+        run_id        INTEGER NOT NULL REFERENCES crawl_runs(id),
+        category_slug TEXT NOT NULL,
+        category_name TEXT NOT NULL,
+        page_index    INTEGER NOT NULL,
+        status        TEXT NOT NULL DEFAULT 'pending',
+        attempts      INTEGER NOT NULL DEFAULT 0,
+        product_count INTEGER NOT NULL DEFAULT 0,
+        invalid_count INTEGER NOT NULL DEFAULT 0,
+        error         TEXT,
+        claimed_at    TEXT,
+        UNIQUE (run_id, category_slug, page_index)
+      );
+      CREATE INDEX idx_crawl_jobs_status ON crawl_jobs(status, id);
+    `,
+  },
 ];

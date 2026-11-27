@@ -1,0 +1,180 @@
+import { z } from 'zod';
+import type { TrackingConfig } from '../config/tracking';
+import type { CrawlEngine } from '../crawler/crawlEngine';
+import type { ProductFilter } from '../db/rowMappers';
+import type { SqlStore } from '../db/sqlStore';
+import type { CrawlTrigger } from '../domain/types';
+import { isDateString } from '../utils/date';
+
+/**
+ * Toàn bộ API của web, KHÔNG phụ thuộc framework: dùng chung cho Express (Node) và Cloudflare Worker.
+ * Mỗi handler nhận query (URLSearchParams) và trả về object JSON; lỗi đầu vào ném HttpError.
+ */
+
+export class HttpError extends Error {
+  constructor(
+    readonly status: number,
+    message: string,
+  ) {
+    super(message);
+  }
+}
+
+export interface ApiDeps {
+  store: SqlStore;
+  engine: CrawlEngine;
+  tracking: TrackingConfig;
+}
+
+const dateParam = z.string().refine(isDateString, 'Ngày phải có dạng YYYY-MM-DD');
+const csv = z
+  .string()
+  .optional()
+  .transform((v) =>
+    v
+      ? v
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
+  );
+
+const filterQuery = z.object({ categories: csv, brands: csv });
+const productsQuery = filterQuery.extend({
+  q: z.string().max(80).optional(),
+  limit: z.coerce.number().int().min(1).max(2000).default(500),
+});
+const rangeQuery = z.object({ from: dateParam, to: dateParam });
+const dateQuery = z.object({ date: dateParam });
+
+function parse<T extends z.ZodTypeAny>(schema: T, query: URLSearchParams): z.infer<T> {
+  const result = schema.safeParse(Object.fromEntries(query));
+  if (!result.success) throw new HttpError(400, result.error.issues.map((i) => i.message).join('; '));
+  return result.data;
+}
+
+const toFilter = (q: { categories: string[]; brands: string[] }): ProductFilter => ({
+  categories: q.categories,
+  brands: q.brands,
+});
+
+/** Bỏ các trường null để giảm dung lượng JSON gửi về trình duyệt (phía client coi thiếu = null). */
+function compact<T extends object>(obj: T): Partial<T> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) if (v !== null && v !== undefined) out[k] = v;
+  return out as Partial<T>;
+}
+
+export function createApi({ store, engine, tracking }: ApiDeps) {
+  return {
+    /** Trạng thái: lần cào gần nhất, tiến độ lượt đang chạy, số liệu tổng quát. */
+    async status() {
+      const [running, recentRuns, firstCrawlDate, lastCrawlDate, crawlDates, productCount] = await Promise.all([
+        store.runningRun(),
+        store.recentRuns(5),
+        store.firstCrawlDate(),
+        store.lastCrawlDate(),
+        store.crawlDates(),
+        store.productCount(),
+      ]);
+      return {
+        running: Boolean(running),
+        progress: running ? await engine.progress(running) : null,
+        recentRuns,
+        firstCrawlDate,
+        lastCrawlDate,
+        crawlDayCount: crawlDates.length,
+        productCount,
+      };
+    },
+
+    /** Dữ liệu cho bộ lọc + cấu hình báo cáo (trình duyệt cần để tự tạo file Excel). */
+    async options() {
+      return {
+        ownBrand: tracking.ownBrand,
+        competitorBrands: tracking.competitorBrands,
+        categories: tracking.categories.filter((c) => c.enabled).map((c) => ({ slug: c.slug, name: c.name })),
+        brands: await store.brands(),
+        tracking,
+      };
+    },
+
+    /** Bảng giá mới nhất (bảng xem nhanh trên web). */
+    async products(query: URLSearchParams) {
+      const q = parse(productsQuery, query);
+      return store.latestPrices({ filter: toFilter(q), keyword: q.q?.trim() || undefined, limit: q.limit });
+    },
+
+    // ----- Dữ liệu thô cho báo cáo (trình duyệt tự phân tích & tạo Excel) -----
+
+    async reportDates(query: URLSearchParams) {
+      const { from, to } = parse(rangeQuery, query);
+      const [dates, baselineDate, firstCrawlDate] = await Promise.all([
+        store.crawlDates(from, to),
+        store.latestDateBefore(from),
+        store.firstCrawlDate(),
+      ]);
+      return { dates, baselineDate, firstCrawlDate };
+    },
+
+    async reportProducts() {
+      return { products: (await store.products()).map(compact) };
+    },
+
+    /** Snapshot của đúng 1 ngày – chia nhỏ để mỗi lần gọi Worker không vượt giới hạn CPU. */
+    async reportSnapshots(query: URLSearchParams) {
+      const { date } = parse(dateQuery, query);
+      return { date, snapshots: (await store.snapshotsBetween(date, date)).map(compact) };
+    },
+
+    // ----- Lấy dữ liệu -----
+
+    async crawlStart(trigger: CrawlTrigger) {
+      const { run, created } = await engine.start(trigger);
+      return {
+        message: created ? 'Đã bắt đầu lấy dữ liệu.' : 'Đang có một lượt lấy dữ liệu chạy dở, tiếp tục lượt đó.',
+        progress: await engine.progress(run),
+      };
+    },
+
+    /** Xử lý 1 trang. Trình duyệt gọi lặp lại cho tới khi finished = true. */
+    async crawlStep() {
+      return engine.step();
+    },
+  };
+}
+
+export type Api = ReturnType<typeof createApi>;
+
+/**
+ * Định tuyến dùng chung: method + đường dẫn → handler.
+ * Trả về null nếu không khớp route nào (để framework xử lý tiếp, vd trả file tĩnh).
+ */
+export async function routeApi(
+  api: Api,
+  method: string,
+  pathname: string,
+  query: URLSearchParams,
+): Promise<{ status: number; body: unknown } | null> {
+  const key = `${method.toUpperCase()} ${pathname.replace(/\/+$/, '')}`;
+  const routes: Record<string, () => Promise<unknown>> = {
+    'GET /api/status': () => api.status(),
+    'GET /api/options': () => api.options(),
+    'GET /api/products': () => api.products(query),
+    'GET /api/report/dates': () => api.reportDates(query),
+    'GET /api/report/products': () => api.reportProducts(),
+    'GET /api/report/snapshots': () => api.reportSnapshots(query),
+    'POST /api/crawl': () => api.crawlStart('manual'),
+    'POST /api/crawl/step': () => api.crawlStep(),
+  };
+  const handler = routes[key];
+  if (!handler) {
+    return pathname.startsWith('/api/') ? { status: 404, body: { error: 'Không tìm thấy API' } } : null;
+  }
+  try {
+    return { status: 200, body: await handler() };
+  } catch (err) {
+    if (err instanceof HttpError) return { status: err.status, body: { error: err.message } };
+    throw err;
+  }
+}

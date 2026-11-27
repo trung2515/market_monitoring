@@ -1,5 +1,3 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
 import { z } from 'zod';
 
 /**
@@ -57,10 +55,4 @@ export function parseTrackingConfig(raw: unknown): TrackingConfig {
     throw new Error(`config tracking không hợp lệ:\n${issues}`);
   }
   return parsed.data;
-}
-
-export function loadTrackingConfig(filePath: string): TrackingConfig {
-  const abs = path.resolve(process.cwd(), filePath);
-  const json: unknown = JSON.parse(readFileSync(abs, 'utf8'));
-  return parseTrackingConfig(json);
 }
