@@ -2,6 +2,7 @@ import path from 'node:path';
 import express, { type ErrorRequestHandler } from 'express';
 import type { AppContext } from '../container';
 import { basicAuth } from './auth';
+import { dmxDiagnostics } from './diag';
 import { apiRouter, HttpError } from './routes/api';
 
 export function createApp(ctx: AppContext): express.Express {
@@ -10,6 +11,7 @@ export function createApp(ctx: AppContext): express.Express {
 
   // Health check không cần đăng nhập (cho uptime monitor / docker)
   app.get('/healthz', (_req, res) => res.json({ ok: true }));
+  app.get('/diag/dmx', dmxDiagnostics(ctx.env.DMX_PROVINCE_ID, ctx.logger.child('diag')));
 
   if (ctx.env.AUTH_USER && ctx.env.AUTH_PASSWORD) {
     app.use(basicAuth(ctx.env.AUTH_USER, ctx.env.AUTH_PASSWORD));
