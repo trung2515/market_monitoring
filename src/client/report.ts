@@ -51,6 +51,10 @@ const EMPTY_SNAPSHOT: Omit<PriceSnapshot, 'crawlDate' | 'productCode' | 'categor
 
 async function getJson<T>(path: string): Promise<T> {
   const res = await fetch(path, { headers: { Accept: 'application/json' } });
+  if (res.status === 401) {
+    location.href = '/login';
+    throw new Error('Phiên đăng nhập đã hết hạn.');
+  }
   if (!res.ok) {
     let message = `Lỗi ${res.status}`;
     try {

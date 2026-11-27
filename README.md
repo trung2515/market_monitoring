@@ -10,7 +10,7 @@ Công cụ tự lấy giá sản phẩm của **Elmich** và các đối thủ (
 
 ## 1. Dùng hằng ngày
 
-1. Mở link web và đăng nhập.
+1. Mở link web và đăng nhập. Phiên đăng nhập có hiệu lực **đến hết ngày** (0h giờ VN), sang ngày mới cần đăng nhập lại. Đổi mật khẩu (`npx wrangler secret put AUTH_PASSWORD`) thì mọi máy đang đăng nhập đều bị đăng xuất.
 2. Chọn kỳ báo cáo (**Theo tuần / Theo tháng / Tuỳ chọn**), chọn danh mục và thương hiệu nếu cần lọc.
 3. Bấm **Tải file Excel**.
 

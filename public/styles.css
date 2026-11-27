@@ -480,6 +480,9 @@ select {
 
 input[type='date'],
 input[type='search'],
+input[type='url'],
+input[type='text'],
+input[type='password'],
 select {
   height: 40px;
   padding: 0 12px;
@@ -489,6 +492,9 @@ select {
 }
 input[type='date']:hover,
 input[type='search']:hover,
+input[type='url']:hover,
+input[type='text']:hover,
+input[type='password']:hover,
 select:hover {
   border-color: var(--ink-2);
 }
@@ -998,4 +1004,49 @@ select:hover {
     transition: none !important;
     animation: none !important;
   }
+}
+
+/* ---------- Màn hình đăng nhập ---------- */
+.login-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px 16px;
+  border-top: 3px solid var(--forest);
+}
+.login-card {
+  width: min(400px, 100%);
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow);
+  padding: 28px;
+}
+.login-title {
+  font-size: 22px;
+  font-weight: 700;
+  margin-top: 24px;
+}
+.login-form {
+  display: grid;
+  gap: 14px;
+  margin-top: 16px;
+}
+.login-field {
+  display: grid;
+  gap: 6px;
+  font-size: 14px;
+  font-weight: 500;
+}
+.login-field input {
+  height: 44px;
+  width: 100%;
+}
+.login-card .note {
+  margin-top: 16px;
+}
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
 }

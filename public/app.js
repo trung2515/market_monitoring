@@ -33,6 +33,11 @@
 
   async function api(path, init) {
     const res = await fetch(path, init);
+    if (res.status === 401) {
+      // Hết phiên (sang ngày mới) → về màn hình đăng nhập
+      location.href = '/login';
+      throw new Error('Phiên đăng nhập đã hết hạn.');
+    }
     if (!res.ok) {
       let message = `Lỗi ${res.status}`;
       try {
@@ -425,6 +430,11 @@
   $('#search').addEventListener('input', () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(loadPreview, 300);
+  });
+
+  $('#logout-btn').addEventListener('click', async () => {
+    await fetch('/api/logout', { method: 'POST' }).catch(() => {});
+    location.href = '/login';
   });
 
   // ---------- Khởi động ----------
