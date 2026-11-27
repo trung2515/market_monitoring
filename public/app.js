@@ -211,16 +211,27 @@
       $('#last-run-meta').textContent = 'Bấm nút bên dưới để lấy dữ liệu lần đầu.';
     }
 
+    // Lỗi / cảnh báo: chỉ hiện 1 dòng tóm tắt, bấm để mở toàn bộ, có nút sao chép
+    const runNote = (lines, isError) => {
+      const first = lines[0].replace(/\s*See https?:\/\/\S+.*$/i, '');
+      const more = lines.length > 1 ? ` <span class="run-note-more">(+${lines.length - 1})</span>` : '';
+      return `<details class="run-note ${isError ? '' : 'warn'}">
+        <summary><span class="run-note-text">${escapeHtml(first)}</span>${more}</summary>
+        <pre>${escapeHtml(lines.join('\n'))}</pre>
+        <button type="button" class="link-btn copy-note">Sao chép</button>
+      </details>`;
+    };
+
     $('#runs').innerHTML =
       s.recentRuns
         .map((r) => {
           const time = new Date(r.startedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
-          const notes = [r.error, ...(r.warnings || [])].filter(Boolean).join(' | ');
+          const lines = [...(r.error ? r.error.split('\n') : []), ...(r.warnings || [])].filter(Boolean);
           return `<li>
             <span class="run-when">${isoDm(r.crawlDate)} ${time}</span>
             <span class="run-who">${TRIGGER_LABEL[r.trigger] || r.trigger} · <span class="badge ${r.status}">${STATUS_LABEL[r.status] || r.status}</span></span>
             <span class="run-count">${r.productCount.toLocaleString('vi-VN')} SP</span>
-            ${notes ? `<span class="run-note ${r.error ? '' : 'warn'}">${escapeHtml(notes)}</span>` : ''}
+            ${lines.length ? runNote(lines, !!r.error) : ''}
           </li>`;
         })
         .join('') || '<li><span class="empty">Chưa có lần nào.</span></li>';
@@ -232,6 +243,19 @@
     }
     updatePeriodUi();
   }
+
+  $('#runs').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.copy-note');
+    if (!btn) return;
+    const text = btn.parentElement.querySelector('pre').textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = 'Đã sao chép';
+    } catch {
+      btn.textContent = 'Không sao chép được – hãy bôi đen để copy';
+    }
+    setTimeout(() => (btn.textContent = 'Sao chép'), 2000);
+  });
 
   const progressText = (p) =>
     `Đang lấy dữ liệu: ${p.doneJobs}/${Math.max(p.totalJobs, p.doneJobs)} trang, ${p.productCount.toLocaleString('vi-VN')} sản phẩm…`;
