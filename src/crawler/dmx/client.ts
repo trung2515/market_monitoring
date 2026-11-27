@@ -61,7 +61,8 @@ export class DmxClient {
   private readonly fetchImpl: typeof fetch;
 
   constructor(private readonly opts: DmxClientOptions) {
-    this.fetchImpl = opts.fetchImpl ?? fetch;
+    // Bọc lại: Cloudflare Workers báo "Illegal invocation" nếu gọi fetch qua thuộc tính của object khác (this sai)
+    this.fetchImpl = opts.fetchImpl ?? ((input, init) => fetch(input, init));
   }
 
   /** Lấy toàn bộ sản phẩm của 1 danh mục (tự phân trang). */
