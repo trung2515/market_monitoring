@@ -12,12 +12,12 @@
     "run_worker_first": true
   },
 
-  // Database D1. Sau khi chạy `npx wrangler d1 create elmich-monitor`, dán database_id vào đây.
+  // Database D1. Tạo bằng `npx wrangler d1 create elmich-monitor`.
   "d1_databases": [
     {
       "binding": "DB",
       "database_name": "elmich-monitor",
-      "database_id": "THAY_BANG_DATABASE_ID",
+      "database_id": "5e83d2a6-9655-4f82-a6c7-b2cc6d6b6d02",
       "migrations_dir": "cloudflare/migrations"
     }
   ],
