@@ -28,8 +28,11 @@ export interface Env {
   LOG_LEVEL?: string;
 }
 
-/** Cron chạy mỗi phút trong khung 6:00–6:59 sáng giờ VN (23:xx UTC): bắt đầu lượt cào hằng ngày + xử lý từng trang. */
-export const DAILY_CRON = '* 23 * * *';
+/**
+ * Cron chạy mỗi phút từ 8:17 đến 8:59 sáng giờ VN (01:17–01:59 UTC): bắt đầu lượt cào hằng ngày + xử lý từng trang.
+ * Đổi giờ: sửa cả hằng số này và "triggers.crons" trong wrangler.jsonc (2 chỗ phải giống hệt nhau).
+ */
+export const DAILY_CRON = '17-59 1 * * *';
 
 let cachedTracking: TrackingConfig | null = null;
 const tracking = () => (cachedTracking ??= parseTrackingConfig(trackingJson));

@@ -51,7 +51,7 @@ Dự án dùng **Prettier**, cấu hình trong `.prettierrc.json`: nháy đơn, 
 Xem chú thích trong [.env.example](.env.example). Quan trọng:
 
 - `AUTH_USER` / `AUTH_PASSWORD`: bật đăng nhập cho web (**bắt buộc khi đưa lên Internet**).
-- `CRAWL_CRON`: giờ cào tự động (mặc định `15 6 * * *` = 6:15 sáng mỗi ngày, giờ VN).
+- `CRAWL_CRON`: giờ cào tự động (mặc định `17 8 * * *` = 8:17 sáng mỗi ngày, giờ VN).
 - `DMX_PROVINCE_ID`: khu vực giá. Giữ cố định để số liệu các kỳ so sánh được với nhau.
 - `DMX_REQUEST_DELAY_MS`: nghỉ giữa các request (mặc định 2 giây). Đừng hạ quá thấp.
 
@@ -177,7 +177,7 @@ Cách tìm API mới: mở trang danh mục bằng Chrome, mở DevTools → tab
 Cloudflare Workers gói free: web có link riêng `https://elmich-monitor.<tên>.workers.dev`, database D1 500 MB, cron tự chạy, **không cần bật máy**.
 Gói free giới hạn ~10 ms CPU mỗi lần chạy, nên:
 
-- Cào **theo từng bước**: cron chạy mỗi phút trong khung 6:00–6:59 sáng (giờ VN), mỗi lần lấy 1 trang (50 SP). Toàn bộ 9 danh mục xong trong khoảng 15–25 phút.
+- Cào **theo từng bước**: cron chạy mỗi phút từ 8:17 đến 8:59 sáng (giờ VN), mỗi lần lấy 1 trang (50 SP). Toàn bộ 9 danh mục xong trong khoảng 15–25 phút.
 - Nút "Lấy data hôm nay": trình duyệt gọi lần lượt từng bước và hiện tiến độ. Đóng trang giữa chừng cũng không sao, cron 10 phút một lần sẽ làm tiếp phần còn lại.
 - File Excel được **tạo trên trình duyệt** (`public/report.bundle.js`), máy chủ chỉ trả dữ liệu thô.
 
@@ -199,6 +199,14 @@ Chép dữ liệu đã cào trên máy (`data/market.db`) lên D1 (không bắt 
 npm run cf:export-data     # → data/d1-import.sql
 npm run cf:import-data     # nạp lên D1, chạy lại nhiều lần không bị trùng
 ```
+
+Ngược lại, kéo dữ liệu Cloudflare đã tự cào về máy (để chạy local có đủ các ngày):
+
+```bash
+npm run cf:pull-data       # gộp vào data/market.db, dữ liệu chỉ có ở máy vẫn giữ nguyên
+```
+
+> Cloudflare và máy là **2 database riêng**, không tự đồng bộ. Nên coi Cloudflare là nơi lưu chính và dùng link web.
 
 ### Khi sửa code
 

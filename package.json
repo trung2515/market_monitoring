@@ -25,7 +25,8 @@
     "cf:migrations": "tsx scripts/gen-d1-migrations.ts",
     "cf:migrate": "wrangler d1 migrations apply elmich-monitor --remote",
     "cf:export-data": "tsx scripts/export-d1-data.ts",
-    "cf:import-data": "wrangler d1 execute elmich-monitor --remote --file=data/d1-import.sql"
+    "cf:import-data": "wrangler d1 execute elmich-monitor --remote --file=data/d1-import.sql",
+    "cf:pull-data": "tsx scripts/pull-d1-data.ts"
   },
   "dependencies": {
     "exceljs": "^4.4.0",

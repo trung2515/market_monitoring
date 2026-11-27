@@ -65,6 +65,7 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
       }),
     ),
     { group: own, header: 'Quà / KM khác', width: 30, value: (r) => promoText(r.own) },
+    { group: own, header: 'Link', width: 8, format: 'link', linkText: () => 'Xem', value: (r) => r.own.product.url },
   ];
 
   for (let i = 0; i < data.maxCompetitors; i++) {
@@ -99,6 +100,14 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
         format: 'percent',
         signColor: true,
         value: (r) => m(r)?.priceDiffPercent,
+      },
+      {
+        group,
+        header: 'Link',
+        width: 8,
+        format: 'link',
+        linkText: () => 'Xem',
+        value: (r) => m(r)?.competitor.product.url,
       },
     );
   }

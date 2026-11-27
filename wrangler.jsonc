@@ -22,11 +22,12 @@
     }
   ],
 
-  // Giờ UTC. "* 23 * * *" = mỗi phút từ 6:00 đến 6:59 sáng giờ VN: bắt đầu lượt cào hằng ngày,
-  // mỗi phút xử lý 1 trang. "*/10 0-22 * * *" = 10 phút một lần trong ngày: làm tiếp lượt cào dang dở
+  // Giờ UTC (= giờ VN − 7). "17-59 1 * * *" = mỗi phút từ 8:17 đến 8:59 sáng giờ VN: bắt đầu lượt cào hằng ngày,
+  // mỗi phút xử lý 1 trang (phải giống hằng số DAILY_CRON trong src/worker/index.ts).
+  // "*/10 0,2-23 * * *" = 10 phút một lần ngoài khung trên: làm tiếp lượt cào dang dở
   // (vd bấm "Lấy data hôm nay" rồi đóng trang). Gói free cho tối đa 5 cron mỗi tài khoản.
   "triggers": {
-    "crons": ["* 23 * * *", "*/10 0-22 * * *"]
+    "crons": ["17-59 1 * * *", "*/10 0,2-23 * * *"]
   },
 
   "vars": {
