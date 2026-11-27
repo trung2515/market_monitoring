@@ -4,7 +4,7 @@ Công cụ theo dõi giá và sản phẩm của Elmich và các đối thủ (S
 
 - Tự **cào dữ liệu hằng ngày** theo lịch: mã SP, giá niêm yết, giá bán, % giảm, giá flash sale, số đã bán, rating, thông số chính.
 - Giao diện web có nút **Xuất Excel theo tuần / tháng / khoảng tuỳ chọn**, lọc được theo danh mục và thương hiệu.
-- Báo cáo Excel gồm: Tổng quan · **1 sheet cho mỗi danh mục** (Elmich + đối thủ cùng tầm giá, và toàn bộ sản phẩm) · Biến động giá · SP mới · Ngừng hiển thị · Lượt bán.
+- Báo cáo Excel gồm: Tổng quan · **1 sheet cho mỗi danh mục** (Elmich + đối thủ cùng tầm giá, và toàn bộ sản phẩm) · Thị phần · Top bán chạy · Phân khúc giá · Khuyến mãi · Lịch sử giá · Biến động giá · SP mới · Ngừng hiển thị · Lượt bán.
 
 ---
 
@@ -65,6 +65,11 @@ Xem chú thích trong [.env.example](.env.example). Quan trọng:
     // danh mục cần theo dõi
     { "slug": "chao-chong-dinh", "name": "Chảo" }, // slug = phần đường dẫn trên dienmayxanh.com
   ],
+  "report": {
+    "topSellersPerCategory": 10, // số SP trong sheet Top bán chạy
+    "priceBands": [200000, 400000, 700000, 1000000, 2000000], // mốc khoảng giá
+    "promoEndingSoonDays": 7, // KM kết thúc trong 7 ngày = "Sắp hết"
+  },
   "segment": {
     "priceTolerancePercent": 20, // đối thủ có giá bán trong ±20% giá Elmich = cùng tầm giá
     "maxCompetitorsPerProduct": 3, // số đối thủ hiện cạnh mỗi sản phẩm Elmich
@@ -85,6 +90,11 @@ Xem chú thích trong [.env.example](.env.example). Quan trọng:
 | -------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **Tổng quan**                                            | Theo danh mục × hãng: số SKU, giá TB/min/max, % giảm TB, số SKU flash sale, SKU mới/ngừng, số SKU tăng/giảm giá, lượt bán tăng thêm. Bên phải là thông tin kỳ và các cảnh báo dữ liệu                                                                                                                           |
 | **Mỗi danh mục 1 sheet** (Chảo, Nồi, Bình đun siêu tốc…) | **[1]** Mỗi dòng là 1 sản phẩm Elmich: mã, tên, kích thước, giá gốc, giá bán, % giảm, giá flash sale, đã bán. Bên phải là **3 đối thủ cùng tầm giá** (hãng, mã, tên, giá bán, flash sale, % chênh). **[2]** Toàn bộ sản phẩm của mọi hãng trong danh mục, sắp theo giá, có cột đổi giá trong kỳ / SP mới / link |
+| **Thị phần**                                             | Mỗi danh mục: xếp hạng các hãng theo lượt bán cộng dồn, % SKU, % lượt bán (thị phần), giá TB, % giảm TB                                                                                                                                                                                                         |
+| **Top bán chạy**                                         | Top 10 sản phẩm bán chạy nhất mỗi danh mục (đổi số lượng ở `report.topSellersPerCategory`)                                                                                                                                                                                                                      |
+| **Phân khúc giá**                                        | Mỗi danh mục × khoảng giá: tổng SKU, số SKU và % lượt bán của Elmich, các hãng nhiều SKU nhất. Dòng tô vàng = khoảng giá Elmich chưa có sản phẩm. Mốc giá ở `report.priceBands`                                                                                                                                 |
+| **Khuyến mãi**                                           | Sản phẩm đang giảm giá hoặc flash sale: mức giảm, thời gian chương trình (từ – đến), số ngày còn lại, đánh dấu "Sắp hết"                                                                                                                                                                                        |
+| **Lịch sử giá**                                          | Giá bán theo từng ngày trong kỳ, mỗi ngày một cột. **Ô trống = ngày đó không có dữ liệu**. Có giá thấp/cao nhất và số lần đổi giá                                                                                                                                                                               |
 | **Biến động giá**                                        | SKU đổi giá giữa đầu kỳ và cuối kỳ: chênh lệch, %, giá min/max trong kỳ, số lần đổi giá                                                                                                                                                                                                                         |
 | **SP mới**                                               | SKU lần đầu xuất hiện trong kỳ                                                                                                                                                                                                                                                                                  |
 | **Ngừng hiển thị**                                       | SKU có ở đầu kỳ nhưng biến mất ở cuối kỳ (hết hàng, ngừng bán, bị ẩn)                                                                                                                                                                                                                                           |
