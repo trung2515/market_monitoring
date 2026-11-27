@@ -3,101 +3,153 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Market Monitoring – Điện Máy Xanh</title>
+    <title>Theo dõi giá Điện Máy Xanh</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <header class="topbar">
-      <h1>Theo dõi thị trường <span>Điện Máy Xanh</span></h1>
-      <div id="status" class="status">Đang tải trạng thái…</div>
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <div>
+          <p class="brand-name">Theo dõi giá Điện Máy Xanh</p>
+          <p class="brand-sub" id="brand-sub">Đang tải…</p>
+        </div>
+      </div>
+      <p id="status" class="status" aria-live="polite">Đang tải trạng thái…</p>
     </header>
 
     <main class="layout">
-      <section class="card">
-        <h2>Xuất báo cáo Excel</h2>
-        <form id="export-form">
-          <fieldset class="period">
-            <legend>Kỳ báo cáo</legend>
-            <label><input type="radio" name="period" value="week" checked /> Theo tuần</label>
-            <label><input type="radio" name="period" value="month" /> Theo tháng</label>
-            <label><input type="radio" name="period" value="custom" /> Tuỳ chọn</label>
-          </fieldset>
+      <!-- Xuất báo cáo: việc chính -->
+      <section class="panel panel-export" aria-labelledby="export-title">
+        <form id="export-form" novalidate>
+          <div class="export-head">
+            <h1 id="export-title" class="sr-only">Xuất báo cáo Excel</h1>
+            <p class="kicker">Xuất báo cáo Excel</p>
+            <p class="period-title" id="period-title" aria-live="polite">Tuần này</p>
+            <p class="period-note" id="period-note"></p>
+          </div>
 
-          <div class="row" data-show="week month">
-            <label
-              >Chọn 1 ngày bất kỳ trong kỳ
+          <div class="field">
+            <span class="field-label" id="period-label">Kỳ báo cáo</span>
+            <div class="segmented" role="radiogroup" aria-labelledby="period-label">
+              <label><input type="radio" name="period" value="week" checked /><span>Theo tuần</span></label>
+              <label><input type="radio" name="period" value="month" /><span>Theo tháng</span></label>
+              <label><input type="radio" name="period" value="custom" /><span>Tuỳ chọn</span></label>
+            </div>
+          </div>
+
+          <div class="field-row" data-show="week month">
+            <label class="field">
+              <span class="field-label">Ngày bất kỳ trong kỳ</span>
               <input type="date" name="date" />
             </label>
-            <small id="period-hint" class="hint"></small>
           </div>
-          <div class="row" data-show="custom" hidden>
-            <label>Từ ngày <input type="date" name="from" /></label>
-            <label>Đến ngày <input type="date" name="to" /></label>
+          <div class="field-row" data-show="custom" hidden>
+            <label class="field">
+              <span class="field-label">Từ ngày</span>
+              <input type="date" name="from" />
+            </label>
+            <label class="field">
+              <span class="field-label">Đến ngày</span>
+              <input type="date" name="to" />
+            </label>
           </div>
 
-          <details open>
-            <summary>Danh mục <small>(không chọn = tất cả)</small></summary>
-            <div id="categories" class="checks"></div>
-          </details>
-          <details>
-            <summary>Thương hiệu <small>(không chọn = tất cả)</small></summary>
-            <div class="quick">
-              <button type="button" data-brands="focus" id="focus-brands-btn">Công ty + đối thủ chính</button>
-              <button type="button" data-brands="none">Bỏ chọn</button>
+          <div class="field">
+            <div class="field-label-row">
+              <span class="field-label">Danh mục</span>
+              <span class="field-hint" id="cat-count">Tất cả</span>
+              <button type="button" class="link-btn" data-clear="categories">Bỏ chọn</button>
             </div>
-            <div id="brands" class="checks"></div>
-          </details>
-
-          <div class="actions">
-            <button type="submit" class="primary" id="export-btn">⬇ Xuất Excel</button>
+            <div id="categories" class="chips"></div>
           </div>
-          <p id="export-msg" class="msg"></p>
+
+          <div class="field">
+            <div class="field-label-row">
+              <span class="field-label">Thương hiệu</span>
+              <span class="field-hint" id="brand-count">Tất cả</span>
+              <button type="button" class="link-btn" data-brands="focus" id="focus-brands-btn">
+                Công ty + đối thủ chính
+              </button>
+              <button type="button" class="link-btn" data-clear="brands">Bỏ chọn</button>
+            </div>
+            <div id="brands" class="chips chips-scroll"></div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-block" id="export-btn">
+            <span class="btn-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 3v12m0 0l-5-5m5 5l5-5M4 19h16" stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </span>
+            <span class="btn-text">Tải file Excel</span>
+          </button>
+          <p id="export-msg" class="msg" aria-live="polite"></p>
         </form>
       </section>
 
-      <section class="card">
-        <h2>Dữ liệu</h2>
-        <p>Hệ thống tự cào hằng ngày theo lịch. Cần số liệu mới ngay thì bấm nút dưới.</p>
-        <button id="crawl-btn" class="secondary">⟳ Lấy data hôm nay</button>
-        <p id="crawl-msg" class="msg"></p>
-        <h3>Lần cào gần đây</h3>
-        <table class="runs">
-          <thead>
-            <tr>
-              <th>Ngày</th>
-              <th>Kiểu</th>
-              <th>Trạng thái</th>
-              <th>Số SP</th>
-              <th>Ghi chú</th>
-            </tr>
-          </thead>
-          <tbody id="runs"></tbody>
-        </table>
+      <!-- Trạng thái dữ liệu -->
+      <section class="panel panel-data" aria-labelledby="data-title">
+        <h2 id="data-title" class="panel-title">Dữ liệu</h2>
+
+        <div class="last-run" id="last-run">
+          <p class="last-run-label">Lần lấy dữ liệu gần nhất</p>
+          <p class="last-run-date" id="last-run-date">—</p>
+          <p class="last-run-meta" id="last-run-meta"></p>
+        </div>
+
+        <button id="crawl-btn" class="btn btn-secondary btn-block" type="button">
+          <span class="btn-icon" aria-hidden="true">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M20 11a8 8 0 10-2.3 5.7M20 4v7h-7" stroke-linecap="round" stroke-linejoin="round" />
+            </svg>
+          </span>
+          <span class="btn-text">Lấy data hôm nay</span>
+        </button>
+        <p id="crawl-msg" class="msg" aria-live="polite"></p>
+        <p class="note">Hệ thống tự lấy dữ liệu mỗi sáng. Chỉ cần bấm khi muốn có số liệu mới ngay.</p>
+
+        <h3 class="sub-title">Các lần gần đây</h3>
+        <ol class="runs" id="runs"></ol>
       </section>
 
-      <section class="card wide">
-        <div class="preview-head">
-          <h2>Xem nhanh bảng giá mới nhất <small id="preview-date"></small></h2>
-          <div class="preview-filters">
+      <!-- Bảng giá -->
+      <section class="panel panel-table" aria-labelledby="table-title">
+        <div class="table-head">
+          <div>
+            <h2 id="table-title" class="panel-title">Bảng giá mới nhất</h2>
+            <p class="table-sub" id="preview-date"></p>
+          </div>
+          <div class="table-filters">
+            <label class="sr-only" for="preview-category">Danh mục</label>
             <select id="preview-category">
               <option value="">Tất cả danh mục</option>
             </select>
-            <input id="search" type="search" placeholder="Tìm theo tên / mã model…" />
+            <label class="sr-only" for="search">Tìm sản phẩm</label>
+            <input id="search" type="search" placeholder="Tìm theo tên hoặc mã model" />
+            <label class="toggle">
+              <input type="checkbox" id="only-own" />
+              <span id="only-own-label">Chỉ Elmich</span>
+            </label>
           </div>
         </div>
         <div class="table-wrap">
-          <table class="preview">
+          <table class="price-table">
             <thead>
               <tr>
-                <th>Danh mục</th>
-                <th>Hãng</th>
-                <th>Mã model</th>
-                <th>Tên sản phẩm</th>
-                <th class="num">Giá niêm yết</th>
-                <th class="num">Giá bán</th>
-                <th class="num">% giảm</th>
-                <th class="num">Flash sale</th>
-                <th>Đã bán</th>
+                <th scope="col">Hãng</th>
+                <th scope="col">Sản phẩm</th>
+                <th scope="col" class="num">Giá niêm yết</th>
+                <th scope="col" class="num">Giá bán</th>
+                <th scope="col" class="num">Giảm</th>
+                <th scope="col" class="num">Flash sale</th>
+                <th scope="col" class="num">Đã bán</th>
               </tr>
             </thead>
             <tbody id="preview"></tbody>
