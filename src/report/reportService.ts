@@ -49,6 +49,7 @@ export class ReportService {
       competitorBrands: tracking.competitorBrands,
       segment: tracking.segment,
       categoryOrder: tracking.categories.map((c) => c.slug),
+      market: tracking.report,
     });
   }
 

@@ -34,6 +34,17 @@ const trackingSchema = z.object({
         .default([]),
     })
     .default({}),
+  /** Tuỳ chọn cho các sheet phân tích thị trường */
+  report: z
+    .object({
+      /** Số SP bán chạy nhất lấy cho mỗi danh mục (sheet "Top bán chạy") */
+      topSellersPerCategory: z.number().int().min(1).max(100).default(10),
+      /** Các mốc chia khoảng giá (VNĐ) cho sheet "Phân khúc giá" */
+      priceBands: z.array(z.number().positive()).min(1).default([200_000, 400_000, 700_000, 1_000_000, 2_000_000]),
+      /** Khuyến mãi kết thúc trong vòng N ngày được đánh dấu "Sắp hết" */
+      promoEndingSoonDays: z.number().int().min(0).default(7),
+    })
+    .default({}),
 });
 
 export type TrackingConfig = z.infer<typeof trackingSchema>;

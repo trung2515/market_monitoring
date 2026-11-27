@@ -20,19 +20,34 @@ export function pickPrices(prices: DmxPrice[] | null | undefined, now: Date) {
   const list = prices ?? [];
   const regular = list.find((p) => (p.saleProgramTypeId ?? 0) === 0) ?? list[0];
 
-  const flashCandidates = list
-    .filter((p) => p !== regular && (p.saleProgramTypeId ?? 0) !== 0 && isActive(p, now))
-    .map((p) => p.price)
-    .filter((v): v is number => typeof v === 'number' && v > 0);
-  const flashPrice = flashCandidates.length > 0 ? Math.min(...flashCandidates) : null;
+  const flash = list
+    .filter(
+      (p) =>
+        p !== regular &&
+        (p.saleProgramTypeId ?? 0) !== 0 &&
+        isActive(p, now) &&
+        typeof p.price === 'number' &&
+        p.price > 0 &&
+        (regular?.price == null || p.price < regular.price),
+    )
+    .sort((a, b) => (a.price ?? 0) - (b.price ?? 0))[0];
 
   return {
     price: regular?.price ?? null,
     listPrice: regular?.sysPrice ?? null,
     discountPercent: regular?.discountPercent ?? null,
-    flashPrice: flashPrice !== null && regular?.price != null && flashPrice >= regular.price ? null : flashPrice,
+    flashPrice: flash?.price ?? null,
     isAvailable: Boolean(regular?.isCanBuy) && (regular?.inventoryStatusId ?? 1) === 1,
+    promoStart: toVnMinute(regular?.startDate),
+    promoEnd: toVnMinute(regular?.endDate),
+    flashEnd: toVnMinute(flash?.endDate),
   };
+}
+
+/** '2026-11-30T23:59:59' (giờ VN) → '2026-11-30 23:59' */
+function toVnMinute(value: string | null | undefined): string | null {
+  if (!value || !parseVnDateTime(value)) return null;
+  return value.slice(0, 16).replace('T', ' ');
 }
 
 /** Chuyển 1 sản phẩm JSON của ĐMX sang mô hình chung của hệ thống. */

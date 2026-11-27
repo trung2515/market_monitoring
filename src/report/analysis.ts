@@ -1,6 +1,7 @@
 import type { TrackingConfig } from '../config/tracking';
 import type { PriceSnapshot, StoredProduct } from '../domain/types';
 import { normalizeBrand } from '../utils/text';
+import { analyzeMarket, emptyMarket, type MarketConfig, type MarketData } from './market';
 import type { Period } from './period';
 
 /**
@@ -89,6 +90,8 @@ export interface ReportData {
   soldDeltas: SoldDelta[];
   categories: CategoryReport[];
   brandSummary: BrandSummaryRow[];
+  /** Thị phần, bán chạy, phân khúc giá, khuyến mãi, lịch sử giá */
+  market: MarketData;
   ownBrand: string;
   /** Ngưỡng ±% giá để coi là cùng tầm giá */
   priceTolerancePercent: number;
@@ -110,7 +113,14 @@ export interface AnalysisInput {
   segment: TrackingConfig['segment'];
   /** Thứ tự danh mục (slug) như trong config – dùng để sắp các sheet */
   categoryOrder?: string[];
+  market?: MarketConfig;
 }
+
+const DEFAULT_MARKET: MarketConfig = {
+  topSellersPerCategory: 10,
+  priceBands: [200_000, 400_000, 700_000, 1_000_000, 2_000_000],
+  promoEndingSoonDays: 7,
+};
 
 export function analyze(input: AnalysisInput): ReportData {
   const { period, baselineDate, endDate } = input;
@@ -136,6 +146,7 @@ export function analyze(input: AnalysisInput): ReportData {
     soldDeltas: [],
     categories: [],
     brandSummary: [],
+    market: emptyMarket(),
     ownBrand: input.ownBrand,
     priceTolerancePercent: input.segment.priceTolerancePercent,
     maxCompetitors: input.segment.maxCompetitorsPerProduct,
@@ -289,6 +300,19 @@ export function analyze(input: AnalysisInput): ReportData {
       b.skuCount - a.skuCount,
   );
 
+  // ---- Phân tích thị trường bổ trợ ----
+  const seriesInPeriod = new Map([...series.keys()].map((code) => [code, inPeriod(code)]));
+  const market = analyzeMarket({
+    current,
+    seriesInPeriod,
+    products: productsByCode,
+    crawlDates,
+    endDate,
+    categoryOrder: input.categoryOrder ?? [],
+    roleOf,
+    config: input.market ?? DEFAULT_MARKET,
+  });
+
   return {
     ...empty,
     baselineDate: effectiveBaseline,
@@ -300,6 +324,7 @@ export function analyze(input: AnalysisInput): ReportData {
     soldDeltas,
     categories,
     brandSummary,
+    market,
   };
 }
 

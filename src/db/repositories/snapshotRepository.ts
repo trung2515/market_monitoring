@@ -11,8 +11,8 @@ export class SnapshotRepository {
       .prepare(
         `INSERT INTO price_snapshots (
            crawl_date, product_code, category_slug, price, list_price, discount_percent, flash_price,
-           is_available, sold_count, sold_text, total_rate, rating
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           is_available, sold_count, sold_text, total_rate, rating, promo_start, promo_end, flash_end
+         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
          ON CONFLICT(crawl_date, product_code) DO UPDATE SET
            category_slug = excluded.category_slug,
            price = excluded.price,
@@ -23,7 +23,10 @@ export class SnapshotRepository {
            sold_count = excluded.sold_count,
            sold_text = excluded.sold_text,
            total_rate = excluded.total_rate,
-           rating = excluded.rating`,
+           rating = excluded.rating,
+           promo_start = excluded.promo_start,
+           promo_end = excluded.promo_end,
+           flash_end = excluded.flash_end`,
       )
       .run(
         snapshot.crawlDate,
@@ -38,6 +41,9 @@ export class SnapshotRepository {
         snapshot.soldText,
         snapshot.totalRate,
         snapshot.rating,
+        snapshot.promoStart,
+        snapshot.promoEnd,
+        snapshot.flashEnd,
       );
   }
 
@@ -102,5 +108,8 @@ function mapSnapshot(r: Record<string, unknown>): PriceSnapshot {
     soldText: strOrNull(r.sold_text),
     totalRate: numOrNull(r.total_rate),
     rating: numOrNull(r.rating),
+    promoStart: strOrNull(r.promo_start),
+    promoEnd: strOrNull(r.promo_end),
+    flashEnd: strOrNull(r.flash_end),
   };
 }

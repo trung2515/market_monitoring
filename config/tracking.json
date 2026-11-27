@@ -55,5 +55,10 @@
     "maxCompetitorsPerProduct": 3,
     "onlyListedCompetitors": false,
     "manualPairs": []
+  },
+  "report": {
+    "topSellersPerCategory": 10,
+    "priceBands": [200000, 400000, 700000, 1000000, 2000000],
+    "promoEndingSoonDays": 7
   }
 }

@@ -59,4 +59,13 @@ export const migrations: { id: number; name: string; sql: string }[] = [
       CREATE INDEX idx_crawl_runs_date ON crawl_runs(crawl_date);
     `,
   },
+  {
+    id: 2,
+    name: 'promo_dates',
+    sql: `
+      ALTER TABLE price_snapshots ADD COLUMN promo_start TEXT;
+      ALTER TABLE price_snapshots ADD COLUMN promo_end TEXT;
+      ALTER TABLE price_snapshots ADD COLUMN flash_end TEXT;
+    `,
+  },
 ];

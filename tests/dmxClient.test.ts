@@ -76,6 +76,9 @@ describe('normalizeDmxProduct', () => {
     assert.equal(snapshot.flashPrice, 230000);
     assert.equal(snapshot.soldCount, 838);
     assert.equal(snapshot.totalRate, 839);
+    assert.equal(snapshot.promoStart, '2026-11-01 00:00');
+    assert.equal(snapshot.promoEnd, '2026-11-30 23:59');
+    assert.equal(snapshot.flashEnd, '2026-11-26 23:59');
   });
 
   it('flash sale ngày khác không tính', () => {

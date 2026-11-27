@@ -43,6 +43,11 @@ export interface PriceSnapshot {
   /** Bộ đếm chính xác ĐMX trả về (bám rất sát số đã bán) – dùng tính chênh lệch giữa 2 kỳ */
   totalRate: number | null;
   rating: number | null;
+  /** Thời gian chương trình giá đang áp dụng, dạng 'YYYY-MM-DD HH:mm' (giờ VN) */
+  promoStart: string | null;
+  promoEnd: string | null;
+  /** Hết hạn của flash sale đang chạy (nếu có) */
+  flashEnd: string | null;
 }
 
 /** Kết quả chuẩn hoá 1 sản phẩm từ 1 lần cào. */

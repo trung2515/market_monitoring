@@ -6,6 +6,7 @@ import { ProductRepository } from '../src/db/repositories/productRepository';
 import { SnapshotRepository } from '../src/db/repositories/snapshotRepository';
 import type { PriceSnapshot, Product } from '../src/domain/types';
 import { ReportService } from '../src/report/reportService';
+import { makeBands } from '../src/report/market';
 
 const makeTracking = (segment: Record<string, unknown> = {}) =>
   parseTrackingConfig({
@@ -46,6 +47,9 @@ function snap(date: string, code: string, price: number, totalRate: number): Pri
     soldText: `Đã bán ${totalRate}`,
     totalRate,
     rating: 5,
+    promoStart: null,
+    promoEnd: null,
+    flashEnd: null,
   };
 }
 
@@ -85,7 +89,9 @@ function setup(segment: Record<string, unknown> = {}) {
     tracking: makeTracking(segment),
     timeZone: 'Asia/Ho_Chi_Minh',
   });
-  return { db, service };
+  const saveSnap = (date: string, code: string, price: number, sold: number) =>
+    snapshots.upsert(snap(date, code, price, sold));
+  return { db, service, saveSnap };
 }
 
 describe('ReportService', () => {
@@ -137,6 +143,61 @@ describe('ReportService', () => {
     assert.equal(chao?.ownRows[0]?.competitors[0]?.priceDiffPercent, 6.9); // (310 − 290) / 290
   });
 
+  it('phân tích thị trường: thị phần, bán chạy, phân khúc giá, lịch sử giá', () => {
+    const { service } = setup();
+    const { market } = service.buildData({ type: 'week', date: '2026-11-26' });
+
+    // Lượt bán cộng dồn cuối kỳ: Sunhouse 1200+20, Tefal 540, Elmich 150
+    assert.deepEqual(
+      market.shares.map((r) => [r.rank, r.brand, r.sold]),
+      [
+        [1, 'Sunhouse', 1220],
+        [2, 'Tefal', 540],
+        [3, 'Elmich', 150],
+      ],
+    );
+    assert.equal(market.shares[0]?.soldShare, 63.9);
+    assert.equal(market.shares[2]?.role, 'own');
+
+    assert.deepEqual(
+      market.topSellers.map((r) => r.product.productCode),
+      ['S1', 'T1', 'E1', 'S3'],
+    );
+
+    assert.equal(market.priceBands.length, 1);
+    assert.equal(market.priceBands[0]?.band, '200k – 400k');
+    assert.equal(market.priceBands[0]?.skuCount, 4);
+    assert.equal(market.priceBands[0]?.ownSkuShare, 25);
+
+    // Lịch sử giá: chỉ các ngày trong kỳ; SP không có dữ liệu trong kỳ (S2) không xuất hiện
+    assert.deepEqual(market.history.dates, ['2026-11-24', '2026-11-26']);
+    const e1 = market.history.rows.find((r) => r.product.productCode === 'E1');
+    assert.deepEqual(e1?.prices, [300000, 290000]);
+    assert.equal(e1?.changeCount, 1);
+    assert.equal(
+      market.history.rows.some((r) => r.product.productCode === 'S2'),
+      false,
+    );
+
+    assert.equal(market.promotions.length, 4);
+  });
+
+  it('chia khoảng giá', () => {
+    assert.deepEqual(
+      makeBands([400_000, 200_000, 1_500_000]).map((b) => b.label),
+      ['Dưới 200k', '200k – 400k', '400k – 1.5tr', 'Từ 1.5tr'],
+    );
+  });
+
+  it('ô trống trong lịch sử giá khi có ngày không cào được', () => {
+    const { service, saveSnap } = setup();
+    saveSnap('2026-11-25', 'S1', 255000, 1150); // chỉ S1 có dữ liệu ngày 25
+    const { market } = service.buildData({ type: 'week', date: '2026-11-26' });
+    assert.deepEqual(market.history.dates, ['2026-11-24', '2026-11-25', '2026-11-26']);
+    const e1 = market.history.rows.find((r) => r.product.productCode === 'E1');
+    assert.deepEqual(e1?.prices, [300000, null, 290000]);
+  });
+
   it('chỉ so với đối thủ trong danh sách khi bật onlyListedCompetitors', () => {
     const { service } = setup({ onlyListedCompetitors: true });
     const data = service.buildData({ type: 'week', date: '2026-11-26' });
@@ -185,7 +246,19 @@ describe('ReportService', () => {
     const wb = buildWorkbook(service.buildData({ type: 'week', date: '2026-11-26' }));
     assert.deepEqual(
       wb.worksheets.map((w) => w.name),
-      ['Tổng quan', 'Chảo', 'Biến động giá', 'SP mới', 'Ngừng hiển thị', 'Lượt bán'],
+      [
+        'Tổng quan',
+        'Chảo',
+        'Thị phần',
+        'Top bán chạy',
+        'Phân khúc giá',
+        'Khuyến mãi',
+        'Lịch sử giá',
+        'Biến động giá',
+        'SP mới',
+        'Ngừng hiển thị',
+        'Lượt bán',
+      ],
     );
   });
 });
