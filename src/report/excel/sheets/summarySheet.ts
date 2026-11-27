@@ -1,6 +1,7 @@
 import type * as ExcelJS from 'exceljs';
 import type { ReportData } from '../../analysis';
-import { addTableSheet, COLORS } from '../tableSheet';
+import { addTableSheet, thinBorder } from '../tableSheet';
+import { THEME } from '../theme';
 
 const ROLE_LABEL = { own: 'Công ty', competitor: 'Đối thủ', other: 'Khác' } as const;
 
@@ -8,6 +9,7 @@ const ROLE_LABEL = { own: 'Công ty', competitor: 'Đối thủ', other: 'Khác'
 export function addSummarySheet(wb: ExcelJS.Workbook, data: ReportData, generatedAt: Date): void {
   const ws = addTableSheet(wb, {
     name: 'Tổng quan',
+    tabColor: THEME.tab.summary,
     title: `Báo cáo thị trường Điện Máy Xanh – ${data.period.title}`,
     subtitle: `Thương hiệu theo dõi: ${data.ownBrand} • Tạo lúc ${generatedAt.toLocaleString('vi-VN', { timeZone: 'Asia/Ho_Chi_Minh' })}`,
     rows: data.brandSummary,
@@ -45,15 +47,24 @@ export function addSummarySheet(wb: ExcelJS.Workbook, data: ReportData, generate
   ];
   ws.getColumn(infoCol).width = 34;
   ws.getColumn(infoCol + 1).width = 26;
+  const header = ws.getCell(3, infoCol);
+  header.value = 'Thông tin kỳ báo cáo';
+  header.font = { name: THEME.font, size: 12, bold: true, color: { argb: THEME.title } };
   info.forEach(([k, v], i) => {
     const keyCell = ws.getCell(4 + i, infoCol);
     keyCell.value = k;
-    keyCell.font = { bold: true };
-    ws.getCell(4 + i, infoCol + 1).value = v;
+    keyCell.font = { name: THEME.font, size: THEME.fontSize, color: { argb: THEME.muted } };
+    keyCell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: THEME.zebraBg } };
+    keyCell.border = thinBorder();
+    const valueCell = ws.getCell(4 + i, infoCol + 1);
+    valueCell.value = v;
+    valueCell.font = { name: THEME.font, size: THEME.fontSize, bold: true, color: { argb: THEME.title } };
+    valueCell.alignment = { horizontal: 'right' };
+    valueCell.border = thinBorder();
   });
   data.notes.forEach((note, i) => {
     const cell = ws.getCell(5 + info.length + i, infoCol);
     cell.value = `⚠ ${note}`;
-    cell.font = { italic: true, color: { argb: COLORS.up } };
+    cell.font = { name: THEME.font, size: THEME.fontSize, italic: true, color: { argb: THEME.up } };
   });
 }

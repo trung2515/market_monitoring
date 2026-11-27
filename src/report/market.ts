@@ -274,6 +274,23 @@ export function analyzeMarket(input: MarketInput): MarketData {
   };
 }
 
+/**
+ * Hiển thị gọn thời gian flash sale:
+ *   cả ngày     → "Cả ngày 27/11"
+ *   vài giờ     → "27/11 09:00–11:59"
+ *   nhiều ngày  → "27/11 → 29/11" (kèm giờ nếu không tròn ngày)
+ */
+export function flashWindow(start: string | null, end: string | null): string | null {
+  if (!start || !end) return null;
+  const day = (v: string) => `${v.slice(8, 10)}/${v.slice(5, 7)}`;
+  const time = (v: string) => v.slice(11, 16);
+  const wholeDays = time(start) === '00:00' && time(end) === '23:59';
+  if (start.slice(0, 10) === end.slice(0, 10)) {
+    return wholeDays ? `Cả ngày ${day(start)}` : `${day(start)} ${time(start)}–${time(end)}`;
+  }
+  return wholeDays ? `${day(start)} → ${day(end)}` : `${day(start)} ${time(start)} → ${day(end)} ${time(end)}`;
+}
+
 /** '2026-11-26 00:00' → '2026-11-26 23:59' = "1 ngày"; 3 tiếng = "3 giờ" */
 export function duration(start: string | null, end: string | null): string | null {
   if (!start || !end) return null;

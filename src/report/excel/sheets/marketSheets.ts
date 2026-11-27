@@ -11,6 +11,7 @@ import type {
 import { isoDayOfWeek } from '../../../utils/date';
 import { normalizeBrand } from '../../../utils/text';
 import { addTableSheet, type ColumnDef } from '../tableSheet';
+import { THEME } from '../theme';
 
 /**
  * Các sheet phân tích thị trường bổ trợ. Dùng được ngay từ ngày dữ liệu đầu tiên
@@ -25,6 +26,7 @@ const isOwnBrand = (data: ReportData) => {
 
 export function addMarketShareSheet(wb: ExcelJS.Workbook, data: ReportData): void {
   addTableSheet<MarketShareRow>(wb, {
+    tabColor: THEME.tab.market,
     name: 'Thị phần',
     title: `Thị phần theo hãng trong từng danh mục (dữ liệu ngày ${data.endDate ?? '—'})`,
     subtitle:
@@ -34,7 +36,7 @@ export function addMarketShareSheet(wb: ExcelJS.Workbook, data: ReportData): voi
     emptyMessage: 'Chưa có dữ liệu.',
     columns: [
       { header: 'Danh mục', width: 18, value: (r) => r.categoryName },
-      { header: 'Hạng', width: 7, format: 'int', value: (r) => r.rank },
+      { header: 'Hạng', width: 7, format: 'int', center: true, value: (r) => r.rank },
       { header: 'Hãng', width: 15, value: (r) => r.brand },
       { header: 'Vai trò', width: 10, value: (r) => ROLE_LABEL[r.role] },
       { header: 'Số SKU', width: 8, format: 'int', value: (r) => r.skuCount },
@@ -50,15 +52,16 @@ export function addMarketShareSheet(wb: ExcelJS.Workbook, data: ReportData): voi
 export function addTopSellersSheet(wb: ExcelJS.Workbook, data: ReportData): void {
   const own = isOwnBrand(data);
   addTableSheet<TopSellerRow>(wb, {
+    tabColor: THEME.tab.market,
     name: 'Top bán chạy',
     title: `Sản phẩm bán chạy nhất mỗi danh mục (dữ liệu ngày ${data.endDate ?? '—'})`,
-    subtitle: 'Xếp theo lượt bán cộng dồn ĐMX hiển thị. Dòng tô vàng là sản phẩm của công ty.',
+    subtitle: 'Xếp theo lượt bán cộng dồn ĐMX hiển thị. Dòng nền xanh lá nhạt là sản phẩm của công ty.',
     rows: data.market.topSellers,
     highlight: (r) => own(r.product.brand),
     emptyMessage: 'Chưa có dữ liệu.',
     columns: [
       { header: 'Danh mục', width: 18, value: (r) => r.product.categoryName },
-      { header: 'Hạng', width: 7, format: 'int', value: (r) => r.rank },
+      { header: 'Hạng', width: 7, format: 'int', center: true, value: (r) => r.rank },
       { header: 'Hãng', width: 14, value: (r) => r.product.brand },
       { header: 'Mã model', width: 15, value: (r) => r.product.modelCode },
       { header: 'Tên sản phẩm', width: 50, value: (r) => r.product.name },
@@ -76,11 +79,12 @@ export function addTopSellersSheet(wb: ExcelJS.Workbook, data: ReportData): void
 
 export function addPriceBandSheet(wb: ExcelJS.Workbook, data: ReportData): void {
   addTableSheet<PriceBandRow>(wb, {
+    tabColor: THEME.tab.market,
     name: 'Phân khúc giá',
     title: `Phân bố sản phẩm theo khoảng giá bán (dữ liệu ngày ${data.endDate ?? '—'})`,
     subtitle: `Cho biết ${data.ownBrand} đang có mặt ở khoảng giá nào và khoảng giá nào đối thủ chiếm ưu thế. Chỉnh mốc giá trong config/tracking.json → report.priceBands.`,
     rows: data.market.priceBands,
-    highlight: (r) => r.ownCount === 0,
+    highlight: (r) => (r.ownCount === 0 ? 'attention' : null),
     emptyMessage: 'Chưa có dữ liệu.',
     columns: [
       { header: 'Danh mục', width: 18, value: (r) => r.categoryName },
@@ -99,6 +103,7 @@ export function addPriceBandSheet(wb: ExcelJS.Workbook, data: ReportData): void 
 export function addPromotionSheet(wb: ExcelJS.Workbook, data: ReportData): void {
   const own = isOwnBrand(data);
   addTableSheet<PromotionRow>(wb, {
+    tabColor: THEME.tab.market,
     name: 'Khuyến mãi',
     title: `Tất cả chương trình khuyến mãi đang chạy (dữ liệu ngày ${data.endDate ?? '—'})`,
     subtitle:
@@ -124,7 +129,7 @@ export function addPromotionSheet(wb: ExcelJS.Workbook, data: ReportData): void 
       { group: 'Giảm giá', header: 'Áp dụng từ', width: 16, value: (r) => r.snapshot.promoStart ?? '' },
       { group: 'Giảm giá', header: 'Áp dụng đến', width: 16, value: (r) => r.snapshot.promoEnd ?? '' },
       { group: 'Giảm giá', header: 'Còn (ngày)', width: 8, format: 'int', value: (r) => r.daysLeft },
-      { group: 'Giảm giá', header: 'Sắp hết', width: 8, value: (r) => (r.endingSoon ? 'Sắp hết' : '') },
+      { group: 'Giảm giá', header: 'Sắp hết', width: 8, center: true, value: (r) => (r.endingSoon ? 'Sắp hết' : '') },
       {
         group: 'Flash sale (giờ vàng)',
         header: 'Giá flash sale',
@@ -134,7 +139,13 @@ export function addPromotionSheet(wb: ExcelJS.Workbook, data: ReportData): void 
       },
       { group: 'Flash sale (giờ vàng)', header: 'Từ', width: 16, value: (r) => r.snapshot.flashStart ?? '' },
       { group: 'Flash sale (giờ vàng)', header: 'Đến', width: 16, value: (r) => r.snapshot.flashEnd ?? '' },
-      { group: 'Flash sale (giờ vàng)', header: 'Thời lượng', width: 11, value: (r) => r.flashDuration ?? '' },
+      {
+        group: 'Flash sale (giờ vàng)',
+        header: 'Thời lượng',
+        width: 11,
+        center: true,
+        value: (r) => r.flashDuration ?? '',
+      },
       {
         group: 'Flash sale (giờ vàng)',
         header: 'Khung giờ',
@@ -173,6 +184,7 @@ export function addFlashCalendarSheet(wb: ExcelJS.Workbook, data: ReportData): v
   const own = isOwnBrand(data);
   const { dates, rows } = data.market.flashCalendar;
   addTableSheet<FlashCalendarRow>(wb, {
+    tabColor: THEME.tab.market,
     name: 'Lịch flash sale',
     title: `Lịch flash sale (giờ vàng) theo ngày – ${data.period.title}`,
     subtitle:
@@ -214,6 +226,7 @@ export function addPriceHistorySheet(wb: ExcelJS.Workbook, data: ReportData): vo
   }));
 
   addTableSheet<PriceHistoryRow>(wb, {
+    tabColor: THEME.tab.market,
     name: 'Lịch sử giá',
     title: `Giá bán theo từng ngày – ${data.period.title}`,
     subtitle:

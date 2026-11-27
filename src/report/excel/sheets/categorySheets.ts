@@ -1,7 +1,9 @@
 import type * as ExcelJS from 'exceljs';
 import type { CategoryReport, OwnProductRow, ProductView, ReportData } from '../../analysis';
 import { normalizeBrand } from '../../../utils/text';
-import { setColumnWidths, sheetName, writeSheetTitle, writeTable, type ColumnDef } from '../tableSheet';
+import { flashWindow } from '../../market';
+import { createSheet, setColumnWidths, sheetName, writeSheetTitle, writeTable, type ColumnDef } from '../tableSheet';
+import { THEME } from '../theme';
 
 /**
  * Mỗi danh mục (Bình đun siêu tốc, Chảo, Nồi...) = 1 sheet, gồm 2 bảng:
@@ -9,7 +11,7 @@ import { setColumnWidths, sheetName, writeSheetTitle, writeTable, type ColumnDef
  *  [2] Toàn bộ sản phẩm trong danh mục (mọi hãng), sắp theo giá
  *
  * Hai bảng được xếp cột sao cho các cột cùng vị trí có độ rộng tương đương
- * (vd cột 12 = "Tên đối thủ 1" ở bảng 1 và "Thông số" ở bảng 2).
+ * (vd cột 13 = "Tên đối thủ 1" ở bảng 1 và "Thông số" ở bảng 2).
  */
 export function addCategorySheets(wb: ExcelJS.Workbook, data: ReportData): void {
   const usedNames = new Set(wb.worksheets.map((w) => w.name));
@@ -19,6 +21,7 @@ export function addCategorySheets(wb: ExcelJS.Workbook, data: ReportData): void 
 }
 
 const sold = (v: ProductView) => v.snapshot.soldText?.replace(/^Đã bán\s*/i, '') ?? '';
+const flashTime = (v: ProductView | undefined) => (v ? flashWindow(v.snapshot.flashStart, v.snapshot.flashEnd) : null);
 const promoText = (v: ProductView) => [v.snapshot.promoLabels, v.snapshot.giftText].filter(Boolean).join('; ');
 
 function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
@@ -31,6 +34,7 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
     { group: own, header: 'Giá bán hiện tại', width: 13, format: 'money', value: (r) => r.own.snapshot.price },
     { group: own, header: '% giảm', width: 8, format: 'percent', value: (r) => r.own.snapshot.discountPercent },
     { group: own, header: 'Giá flash sale', width: 13, format: 'money', value: (r) => r.own.snapshot.flashPrice },
+    { group: own, header: 'Thời gian flash', width: 14, center: true, value: (r) => flashTime(r.own) },
     { group: own, header: 'Đã bán', width: 10, value: (r) => sold(r.own) },
     { group: own, header: 'Quà / KM khác', width: 30, value: (r) => promoText(r.own) },
   ];
@@ -49,6 +53,7 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
       { group, header: 'Tên sản phẩm', width: 38, value: (r) => m(r)?.competitor.product.name },
       { group, header: 'Giá bán', width: 13, format: 'money', value: (r) => m(r)?.competitor.snapshot.price },
       { group, header: 'Flash sale', width: 13, format: 'money', value: (r) => m(r)?.competitor.snapshot.flashPrice },
+      { group, header: 'Thời gian flash', width: 14, center: true, value: (r) => flashTime(m(r)?.competitor) },
       {
         group,
         header: `Chênh so với ${own}`,
@@ -73,6 +78,7 @@ function allColumns(data: ReportData): ColumnDef<ProductView>[] {
     { header: 'Giá bán hiện tại', width: 13, format: 'money', value: (r) => r.snapshot.price },
     { header: '% giảm', width: 8, format: 'percent', value: (r) => r.snapshot.discountPercent },
     { header: 'Giá flash sale', width: 13, format: 'money', value: (r) => r.snapshot.flashPrice },
+    { header: 'Thời gian flash', width: 14, center: true, value: (r) => flashTime(r) },
     { header: 'Đã bán', width: 10, value: sold },
     { header: 'Quà / KM khác', width: 30, value: promoText },
     { header: 'Mã model', width: 14, value: (r) => r.product.modelCode },
@@ -92,7 +98,7 @@ function allColumns(data: ReportData): ColumnDef<ProductView>[] {
 }
 
 function addCategorySheet(wb: ExcelJS.Workbook, data: ReportData, category: CategoryReport, name: string): void {
-  const ws = wb.addWorksheet(name, { views: [{ state: 'frozen', xSplit: 2, ySplit: 0 }] });
+  const ws = createSheet(wb, name, { tabColor: THEME.tab.category, freezeCols: 2 });
   const own = normalizeBrand(data.ownBrand);
   const ownCols = ownColumns(data);
   const allCols = allColumns(data);
@@ -103,14 +109,15 @@ function addCategorySheet(wb: ExcelJS.Workbook, data: ReportData, category: Cate
     `${category.name} – ${data.period.title} (dữ liệu ngày ${data.endDate ?? '—'})`,
     `${category.products.length} sản phẩm, trong đó ${category.ownRows.length} của ${data.ownBrand}. ` +
       `Đối thủ cùng tầm giá: giá bán chênh trong ±${data.priceTolerancePercent}%, ưu tiên cùng kích thước rồi giá gần nhất. ` +
-      `Chênh % = (giá đối thủ − giá ${data.ownBrand}) / giá ${data.ownBrand}.`,
+      `Chênh % = (giá đối thủ − giá ${data.ownBrand}) / giá ${data.ownBrand}. Nền xanh lá = sản phẩm ${data.ownBrand}; nền cam = chưa có đối thủ cùng tầm giá.`,
   );
 
   row = writeTable(ws, row, {
     caption: `[1] ${data.ownBrand} so với đối thủ cùng tầm giá`,
     columns: ownCols,
     rows: category.ownRows,
-    highlight: (r) => r.competitors.length === 0,
+    highlight: (r) => (r.competitors.length === 0 ? 'attention' : null),
+    ownGroup: data.ownBrand,
     emptyMessage: `Danh mục này chưa có sản phẩm ${data.ownBrand}.`,
   });
 
@@ -118,7 +125,7 @@ function addCategorySheet(wb: ExcelJS.Workbook, data: ReportData, category: Cate
     caption: '[2] Toàn bộ sản phẩm trong danh mục (sắp theo giá bán)',
     columns: allCols,
     rows: category.products,
-    highlight: (r) => normalizeBrand(r.product.brand) === own,
+    highlight: (r) => (normalizeBrand(r.product.brand) === own ? 'own' : null),
     autoFilter: true,
   });
 }

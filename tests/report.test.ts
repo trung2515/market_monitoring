@@ -6,7 +6,7 @@ import { ProductRepository } from '../src/db/repositories/productRepository';
 import { SnapshotRepository } from '../src/db/repositories/snapshotRepository';
 import type { PriceSnapshot, Product } from '../src/domain/types';
 import { ReportService } from '../src/report/reportService';
-import { duration, makeBands } from '../src/report/market';
+import { duration, flashWindow, makeBands } from '../src/report/market';
 
 const makeTracking = (segment: Record<string, unknown> = {}) =>
   parseTrackingConfig({
@@ -224,6 +224,14 @@ describe('ReportService', () => {
     assert.equal(duration('2026-11-26 09:00', '2026-11-26 11:59'), '3 giờ');
     assert.equal(duration('2026-11-26 09:00', '2026-11-26 09:29'), '30 phút');
     assert.equal(duration(null, '2026-11-26 11:59'), null);
+  });
+
+  it('hiển thị gọn thời gian flash sale', () => {
+    assert.equal(flashWindow('2026-11-27 00:00', '2026-11-27 23:59'), 'Cả ngày 27/11');
+    assert.equal(flashWindow('2026-11-27 09:00', '2026-11-27 11:59'), '27/11 09:00–11:59');
+    assert.equal(flashWindow('2026-11-27 00:00', '2026-11-29 23:59'), '27/11 → 29/11');
+    assert.equal(flashWindow('2026-11-27 20:00', '2026-11-28 08:00'), '27/11 20:00 → 28/11 08:00');
+    assert.equal(flashWindow(null, null), null);
   });
 
   it('chia khoảng giá', () => {

@@ -2,6 +2,7 @@ import type * as ExcelJS from 'exceljs';
 import type { GoneProduct, PriceChange, ProductView, ReportData, SoldDelta } from '../../analysis';
 import { detailColumns, priceColumns, productColumns } from '../columns';
 import { addTableSheet } from '../tableSheet';
+import { THEME } from '../theme';
 import { normalizeBrand } from '../../../utils/text';
 
 /**
@@ -16,6 +17,7 @@ const isOwn = (data: ReportData) => {
 export function addPriceChangeSheet(wb: ExcelJS.Workbook, data: ReportData): void {
   const own = isOwn(data);
   addTableSheet<PriceChange>(wb, {
+    tabColor: THEME.tab.tracking,
     name: 'Biến động giá',
     title: 'Sản phẩm thay đổi giá bán trong kỳ',
     subtitle: `So sánh giá bán ngày ${data.baselineDate ?? '—'} với ngày ${data.endDate ?? '—'}. Sắp xếp: giảm giá mạnh nhất trước.`,
@@ -40,6 +42,7 @@ export function addPriceChangeSheet(wb: ExcelJS.Workbook, data: ReportData): voi
 export function addNewProductsSheet(wb: ExcelJS.Workbook, data: ReportData): void {
   const own = isOwn(data);
   addTableSheet<ProductView>(wb, {
+    tabColor: THEME.tab.tracking,
     name: 'SP mới',
     title: 'Sản phẩm mới xuất hiện trong kỳ',
     subtitle: 'Sản phẩm lần đầu được ghi nhận trên ĐMX trong kỳ này (không tính lần cào đầu tiên của hệ thống).',
@@ -61,6 +64,7 @@ export function addNewProductsSheet(wb: ExcelJS.Workbook, data: ReportData): voi
 export function addGoneProductsSheet(wb: ExcelJS.Workbook, data: ReportData): void {
   const own = isOwn(data);
   addTableSheet<GoneProduct>(wb, {
+    tabColor: THEME.tab.tracking,
     name: 'Ngừng hiển thị',
     title: 'Sản phẩm có ở đầu kỳ nhưng không còn hiển thị ở cuối kỳ',
     subtitle: 'Có thể do hết hàng, ngừng kinh doanh hoặc bị ẩn khỏi danh mục.',
@@ -79,6 +83,7 @@ export function addGoneProductsSheet(wb: ExcelJS.Workbook, data: ReportData): vo
 export function addSalesSheet(wb: ExcelJS.Workbook, data: ReportData): void {
   const own = isOwn(data);
   addTableSheet<SoldDelta>(wb, {
+    tabColor: THEME.tab.tracking,
     name: 'Lượt bán',
     title: 'Lượt bán tăng thêm trong kỳ (ước tính)',
     subtitle:
