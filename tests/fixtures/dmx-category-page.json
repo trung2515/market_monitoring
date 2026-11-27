@@ -19,7 +19,30 @@
             "inventoryStatusId": 1,
             "saleProgramTypeId": 0,
             "startDate": "2026-11-01T00:00:00",
-            "endDate": "2026-11-30T23:59:59"
+            "endDate": "2026-11-30T23:59:59",
+            "specialLabel": [
+              {
+                "labelName": "Trả chậm 0%"
+              },
+              {
+                "labelName": "Quà 200.000₫"
+              }
+            ],
+            "installment": {
+              "title": "Trả chậm 0%"
+            },
+            "promotions": {
+              "giftPromotions": [],
+              "discountPromotions": [],
+              "normalPromotions": [
+                {
+                  "content": "Nhập mã VNPAY50 giảm tối đa 50,000đ khi thanh toán qua VNPAY-QR <a href=\"https://x\"> (Xem chi tiết tại đây)</a>",
+                  "type": 3,
+                  "toValue": 0,
+                  "promotionEndDate": 1798736399000
+                }
+              ]
+            }
           },
           {
             "id": "514_1_198_5020221_0",
@@ -30,7 +53,12 @@
             "inventoryStatusId": 1,
             "saleProgramTypeId": 1,
             "startDate": "2026-11-26T00:00:00",
-            "endDate": "2026-11-26T23:59:59"
+            "endDate": "2026-11-26T23:59:59",
+            "applyHourRange": "0",
+            "stockQuantity": {
+              "maxQuantity": 20,
+              "counter": 0
+            }
           },
           {
             "id": "514_1_198_5038828_0",
@@ -41,7 +69,8 @@
             "inventoryStatusId": 1,
             "saleProgramTypeId": 1,
             "startDate": "2026-11-27T00:00:00",
-            "endDate": "2026-11-27T23:59:59"
+            "endDate": "2026-11-27T23:59:59",
+            "stockQuantity": null
           }
         ],
         "productCode": "1033263001105",
@@ -56,10 +85,17 @@
             "keyName": "label_ksp_osp_dmx_tgdd"
           }
         ],
-        "brand": { "brandCode": "318", "brandName": "Elmich" },
+        "brand": {
+          "brandCode": "318",
+          "brandName": "Elmich"
+        },
         "isOnlineOnly": true,
         "cateName": "Chảo",
-        "categoryCode": "206"
+        "categoryCode": "206",
+        "gift": {
+          "name": "PMH Pin tiểu (đơn hàng từ 80.000đ trở lên) trị giá 20.000đ",
+          "avatar": ""
+        }
       },
       {
         "id": "221339",
@@ -75,7 +111,24 @@
             "inventoryStatusId": 1,
             "saleProgramTypeId": 0,
             "startDate": "2026-11-01T00:00:00",
-            "endDate": "2026-11-30T23:59:59"
+            "endDate": "2026-11-30T23:59:59",
+            "promotions": {
+              "giftPromotions": [
+                {
+                  "title": "Mua 1 tặng:",
+                  "toValue": 453000,
+                  "promotionEndDate": 1796057999000,
+                  "lstGift": [
+                    {
+                      "name": "Bộ dao 3 món Gallery Lock&Lock CKK308S3",
+                      "quantity": 1,
+                      "toValue": 453000
+                    }
+                  ]
+                }
+              ],
+              "normalPromotions": "bất thường để kiểm tra .catch"
+            }
           }
         ],
         "productCode": "1033263001073",
@@ -83,8 +136,14 @@
         "rate": 4.9,
         "totalRate": 25211,
         "totalSold": "Đã bán 25,2k",
-        "lstKeySellingPoint": [{ "label": "Đường kính 26 cm;Inox 304;Việt Nam;Dùng được bếp từ" }],
-        "brand": { "brandName": "Sunhouse" },
+        "lstKeySellingPoint": [
+          {
+            "label": "Đường kính 26 cm;Inox 304;Việt Nam;Dùng được bếp từ"
+          }
+        ],
+        "brand": {
+          "brandName": "Sunhouse"
+        },
         "isOnlineOnly": false
       },
       {
@@ -106,10 +165,19 @@
         "rate": 5,
         "totalRate": 43248,
         "totalSold": "Đã bán 43,2k",
-        "lstKeySellingPoint": [{ "label": "Đường kính 28 cm;Nhôm;Titanium;Pháp;Dùng được bếp từ" }],
-        "brand": { "brandName": "Tefal" }
+        "lstKeySellingPoint": [
+          {
+            "label": "Đường kính 28 cm;Nhôm;Titanium;Pháp;Dùng được bếp từ"
+          }
+        ],
+        "brand": {
+          "brandName": "Tefal"
+        }
       },
-      { "id": "broken", "name": "Sản phẩm thiếu productCode để kiểm tra bỏ qua dữ liệu lỗi" }
+      {
+        "id": "broken",
+        "name": "Sản phẩm thiếu productCode để kiểm tra bỏ qua dữ liệu lỗi"
+      }
     ],
     "cateId": "",
     "cateName": "Chảo",

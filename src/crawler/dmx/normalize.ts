@@ -40,7 +40,60 @@ export function pickPrices(prices: DmxPrice[] | null | undefined, now: Date) {
     isAvailable: Boolean(regular?.isCanBuy) && (regular?.inventoryStatusId ?? 1) === 1,
     promoStart: toVnMinute(regular?.startDate),
     promoEnd: toVnMinute(regular?.endDate),
+    flashStart: toVnMinute(flash?.startDate),
     flashEnd: toVnMinute(flash?.endDate),
+    flashHours: hourRange(flash?.applyHourRange),
+    flashQuota: flash?.stockQuantity?.maxQuantity ?? null,
+    ...otherPromotions(regular),
+  };
+}
+
+/** "0" hoặc rỗng = áp dụng cả ngày → null */
+function hourRange(value: string | number | null | undefined): string | null {
+  const v = value == null ? '' : String(value).trim();
+  return v === '' || v === '0' ? null : v;
+}
+
+const stripHtml = (html: string) =>
+  html
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\(?\s*Xem chi tiết tại đây\s*\)?/gi, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+
+const joinOrNull = (items: string[], sep: string) => {
+  const unique = [...new Set(items.map((x) => x.trim()).filter(Boolean))];
+  return unique.length ? unique.join(sep) : null;
+};
+
+/** Quà tặng, nhãn khuyến mãi, trả góp, ưu đãi thanh toán... đi kèm giá thường. */
+function otherPromotions(price: DmxPrice | undefined) {
+  const promos = price?.promotions;
+  const gifts = promos?.giftPromotions ?? [];
+  const giftText = gifts.map((g) => {
+    const items = (g.lstGift ?? []).map(
+      (x) => `${x.name ?? ''}${x.quantity && x.quantity > 1 ? ` x${x.quantity}` : ''}`,
+    );
+    return `${g.title ?? 'Tặng'} ${items.join(', ')}`.trim();
+  });
+  const giftValue = gifts.reduce((sum, g) => sum + (g.toValue ?? 0), 0);
+
+  const labels = (price?.specialLabel ?? []).map((l) => l.labelName ?? '');
+  const installmentLabel = labels.find((l) => /^trả (chậm|góp)/i.test(l));
+
+  const others = [...(promos?.discountPromotions ?? []), ...(promos?.normalPromotions ?? [])].map((p) =>
+    stripHtml(p.content ?? p.title ?? ''),
+  );
+
+  return {
+    giftText: joinOrNull(giftText, '; '),
+    giftValue: giftValue > 0 ? giftValue : null,
+    promoLabels: joinOrNull(
+      labels.filter((l) => !/^trả (chậm|góp)/i.test(l)),
+      '; ',
+    ),
+    installment: installmentLabel ?? price?.installment?.title ?? null,
+    otherPromos: joinOrNull(others, ' | '),
   };
 }
 
@@ -86,6 +139,7 @@ export function normalizeDmxProduct(
       productCode: raw.productCode,
       categorySlug: category.slug,
       ...prices,
+      giftText: joinOrNull([prices.giftText ?? '', raw.gift?.name ?? ''], '; '),
       soldText: raw.totalSold ?? null,
       soldCount: parseSoldText(raw.totalSold),
       totalRate: raw.totalRate ?? null,

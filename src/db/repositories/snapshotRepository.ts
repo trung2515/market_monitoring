@@ -2,49 +2,55 @@ import type { PriceSnapshot } from '../../domain/types';
 import type { Database } from '../database';
 import { bool, buildProductFilter, numOrNull, str, strOrNull, type ProductFilter } from '../rowMappers';
 
+/**
+ * Ánh xạ trường của PriceSnapshot ↔ cột trong bảng price_snapshots.
+ * Thêm trường mới: thêm 1 dòng ở đây + 1 migration (db/migrations.ts) + cập nhật domain/types.ts.
+ */
+type SqlValue = string | number | null;
+const COLUMNS: { field: keyof PriceSnapshot; column: string; toDb?: (v: unknown) => SqlValue }[] = [
+  { field: 'crawlDate', column: 'crawl_date' },
+  { field: 'productCode', column: 'product_code' },
+  { field: 'categorySlug', column: 'category_slug' },
+  { field: 'price', column: 'price' },
+  { field: 'listPrice', column: 'list_price' },
+  { field: 'discountPercent', column: 'discount_percent' },
+  { field: 'flashPrice', column: 'flash_price' },
+  { field: 'isAvailable', column: 'is_available', toDb: (v) => (v ? 1 : 0) },
+  { field: 'soldCount', column: 'sold_count' },
+  { field: 'soldText', column: 'sold_text' },
+  { field: 'totalRate', column: 'total_rate' },
+  { field: 'rating', column: 'rating' },
+  { field: 'promoStart', column: 'promo_start' },
+  { field: 'promoEnd', column: 'promo_end' },
+  { field: 'flashStart', column: 'flash_start' },
+  { field: 'flashEnd', column: 'flash_end' },
+  { field: 'flashHours', column: 'flash_hours' },
+  { field: 'flashQuota', column: 'flash_quota' },
+  { field: 'giftText', column: 'gift_text' },
+  { field: 'giftValue', column: 'gift_value' },
+  { field: 'promoLabels', column: 'promo_labels' },
+  { field: 'installment', column: 'installment' },
+  { field: 'otherPromos', column: 'other_promos' },
+];
+const KEY_COLUMNS = new Set(['crawl_date', 'product_code']);
+
+const UPSERT_SQL = `INSERT INTO price_snapshots (${COLUMNS.map((c) => c.column).join(', ')})
+  VALUES (${COLUMNS.map(() => '?').join(', ')})
+  ON CONFLICT(crawl_date, product_code) DO UPDATE SET
+  ${COLUMNS.filter((c) => !KEY_COLUMNS.has(c.column))
+    .map((c) => `${c.column} = excluded.${c.column}`)
+    .join(',\n  ')}`;
+
 export class SnapshotRepository {
   constructor(private readonly db: Database) {}
 
   /** Mỗi sản phẩm chỉ có 1 bản ghi/ngày; cào lại trong ngày sẽ ghi đè. */
   upsert(snapshot: PriceSnapshot): void {
-    this.db
-      .prepare(
-        `INSERT INTO price_snapshots (
-           crawl_date, product_code, category_slug, price, list_price, discount_percent, flash_price,
-           is_available, sold_count, sold_text, total_rate, rating, promo_start, promo_end, flash_end
-         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-         ON CONFLICT(crawl_date, product_code) DO UPDATE SET
-           category_slug = excluded.category_slug,
-           price = excluded.price,
-           list_price = excluded.list_price,
-           discount_percent = excluded.discount_percent,
-           flash_price = excluded.flash_price,
-           is_available = excluded.is_available,
-           sold_count = excluded.sold_count,
-           sold_text = excluded.sold_text,
-           total_rate = excluded.total_rate,
-           rating = excluded.rating,
-           promo_start = excluded.promo_start,
-           promo_end = excluded.promo_end,
-           flash_end = excluded.flash_end`,
-      )
-      .run(
-        snapshot.crawlDate,
-        snapshot.productCode,
-        snapshot.categorySlug,
-        snapshot.price,
-        snapshot.listPrice,
-        snapshot.discountPercent,
-        snapshot.flashPrice,
-        snapshot.isAvailable ? 1 : 0,
-        snapshot.soldCount,
-        snapshot.soldText,
-        snapshot.totalRate,
-        snapshot.rating,
-        snapshot.promoStart,
-        snapshot.promoEnd,
-        snapshot.flashEnd,
-      );
+    const values = COLUMNS.map((c) => {
+      const v = snapshot[c.field];
+      return c.toDb ? c.toDb(v) : ((v ?? null) as SqlValue);
+    });
+    this.db.prepare(UPSERT_SQL).run(...values);
   }
 
   /** Tất cả snapshot trong khoảng [from, to] (bao gồm 2 đầu), lọc theo danh mục/hãng. */
@@ -110,6 +116,14 @@ function mapSnapshot(r: Record<string, unknown>): PriceSnapshot {
     rating: numOrNull(r.rating),
     promoStart: strOrNull(r.promo_start),
     promoEnd: strOrNull(r.promo_end),
+    flashStart: strOrNull(r.flash_start),
     flashEnd: strOrNull(r.flash_end),
+    flashHours: strOrNull(r.flash_hours),
+    flashQuota: numOrNull(r.flash_quota),
+    giftText: strOrNull(r.gift_text),
+    giftValue: numOrNull(r.gift_value),
+    promoLabels: strOrNull(r.promo_labels),
+    installment: strOrNull(r.installment),
+    otherPromos: strOrNull(r.other_promos),
   };
 }

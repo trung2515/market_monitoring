@@ -4,6 +4,7 @@ import path from 'node:path';
 import { describe, it } from 'node:test';
 import { DmxApiError, DmxClient } from '../src/crawler/dmx/client';
 import { normalizeDmxProduct } from '../src/crawler/dmx/normalize';
+import { dmxProductSchema } from '../src/crawler/dmx/schema';
 import { silentLogger } from '../src/utils/logger';
 
 const fixture = JSON.parse(readFileSync(path.join(__dirname, 'fixtures/dmx-category-page.json'), 'utf8'));
@@ -79,6 +80,13 @@ describe('normalizeDmxProduct', () => {
     assert.equal(snapshot.promoStart, '2026-11-01 00:00');
     assert.equal(snapshot.promoEnd, '2026-11-30 23:59');
     assert.equal(snapshot.flashEnd, '2026-11-26 23:59');
+    assert.equal(snapshot.flashStart, '2026-11-26 00:00');
+    assert.equal(snapshot.flashHours, null); // "0" = cả ngày
+    assert.equal(snapshot.flashQuota, 20);
+    assert.equal(snapshot.promoLabels, 'Quà 200.000₫');
+    assert.equal(snapshot.installment, 'Trả chậm 0%');
+    assert.equal(snapshot.otherPromos, 'Nhập mã VNPAY50 giảm tối đa 50,000đ khi thanh toán qua VNPAY-QR');
+    assert.equal(snapshot.giftText, 'PMH Pin tiểu (đơn hàng từ 80.000đ trở lên) trị giá 20.000đ');
   });
 
   it('flash sale ngày khác không tính', () => {
@@ -91,6 +99,15 @@ describe('normalizeDmxProduct', () => {
     const { product } = normalizeDmxProduct(raw, category);
     assert.equal(product.name, 'Chảo nhôm chống dính đáy từ 28 cm Tefal G1430605');
     assert.equal(product.modelCode, 'G1430605');
+  });
+
+  it('quà tặng; dữ liệu khuyến mãi sai cấu trúc không làm hỏng sản phẩm', () => {
+    const parsed = dmxProductSchema.parse(sunhouse); // normalPromotions sai kiểu → bị bỏ qua nhờ .catch
+    const { snapshot } = normalizeDmxProduct(parsed, category, new Date('2026-11-26T10:00:00+07:00'));
+    assert.equal(snapshot.giftText, 'Mua 1 tặng: Bộ dao 3 món Gallery Lock&Lock CKK308S3');
+    assert.equal(snapshot.giftValue, 453000);
+    assert.equal(snapshot.otherPromos, null);
+    assert.equal(snapshot.price, 450000);
   });
 
   it('sản phẩm không có flash sale', () => {

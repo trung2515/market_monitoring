@@ -46,8 +46,23 @@ export interface PriceSnapshot {
   /** Thời gian chương trình giá đang áp dụng, dạng 'YYYY-MM-DD HH:mm' (giờ VN) */
   promoStart: string | null;
   promoEnd: string | null;
-  /** Hết hạn của flash sale đang chạy (nếu có) */
+  /** Thời gian flash sale (giờ vàng) đang chạy, dạng 'YYYY-MM-DD HH:mm' */
+  flashStart: string | null;
   flashEnd: string | null;
+  /** Khung giờ trong ngày nếu flash sale chỉ chạy vài giờ (null = cả ngày) */
+  flashHours: string | null;
+  /** Số suất giới hạn của flash sale */
+  flashQuota: number | null;
+  /** Quà tặng kèm, vd "Mua 1 tặng: Bộ dao 3 món Lock&Lock CKK308S3" */
+  giftText: string | null;
+  /** Tổng giá trị quà tặng (VNĐ) nếu ĐMX công bố */
+  giftValue: number | null;
+  /** Nhãn khuyến mãi trên thẻ SP (trừ trả chậm), vd "Quà 900.000₫; Giảm thêm 300.000₫" */
+  promoLabels: string | null;
+  /** Hình thức trả góp, vd "Trả chậm 0%" */
+  installment: string | null;
+  /** Ưu đãi khác: mã giảm giá, ưu đãi thanh toán... */
+  otherPromos: string | null;
 }
 
 /** Kết quả chuẩn hoá 1 sản phẩm từ 1 lần cào. */

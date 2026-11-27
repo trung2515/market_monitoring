@@ -6,7 +6,7 @@ import { ProductRepository } from '../src/db/repositories/productRepository';
 import { SnapshotRepository } from '../src/db/repositories/snapshotRepository';
 import type { PriceSnapshot, Product } from '../src/domain/types';
 import { ReportService } from '../src/report/reportService';
-import { makeBands } from '../src/report/market';
+import { duration, makeBands } from '../src/report/market';
 
 const makeTracking = (segment: Record<string, unknown> = {}) =>
   parseTrackingConfig({
@@ -49,7 +49,15 @@ function snap(date: string, code: string, price: number, totalRate: number): Pri
     rating: 5,
     promoStart: null,
     promoEnd: null,
+    flashStart: null,
     flashEnd: null,
+    flashHours: null,
+    flashQuota: null,
+    giftText: null,
+    giftValue: null,
+    promoLabels: null,
+    installment: null,
+    otherPromos: null,
   };
 }
 
@@ -89,8 +97,8 @@ function setup(segment: Record<string, unknown> = {}) {
     tracking: makeTracking(segment),
     timeZone: 'Asia/Ho_Chi_Minh',
   });
-  const saveSnap = (date: string, code: string, price: number, sold: number) =>
-    snapshots.upsert(snap(date, code, price, sold));
+  const saveSnap = (date: string, code: string, price: number, sold: number, extra: Partial<PriceSnapshot> = {}) =>
+    snapshots.upsert({ ...snap(date, code, price, sold), ...extra });
   return { db, service, saveSnap };
 }
 
@@ -182,6 +190,42 @@ describe('ReportService', () => {
     assert.equal(market.promotions.length, 4);
   });
 
+  it('lịch flash sale + khuyến mãi khác', () => {
+    const { service, saveSnap } = setup();
+    saveSnap('2026-11-24', 'T1', 320000, 520, {
+      flashPrice: 250000,
+      flashStart: '2026-11-24 00:00',
+      flashEnd: '2026-11-24 23:59',
+    });
+    saveSnap('2026-11-26', 'T1', 320000, 540, {
+      discountPercent: 0,
+      flashPrice: 260000,
+      flashStart: '2026-11-26 09:00',
+      flashEnd: '2026-11-26 11:59',
+      flashQuota: 20,
+    });
+    saveSnap('2026-11-26', 'S3', 310000, 20, { discountPercent: 0, giftText: 'Mua 1 tặng: Bộ dao 3 món' });
+    const { market } = service.buildData({ type: 'week', date: '2026-11-26' });
+
+    assert.deepEqual(
+      market.flashCalendar.rows.map((r) => [r.product.productCode, r.flash, r.flashDays, r.minFlash]),
+      [['T1', [250000, 260000], 2, 250000]],
+    );
+    const t1 = market.promotions.find((p) => p.product.productCode === 'T1');
+    assert.equal(t1?.flashDuration, '3 giờ');
+    assert.equal(t1?.snapshot.flashQuota, 20);
+    // S3 không giảm giá nhưng có quà tặng → vẫn nằm trong sheet Khuyến mãi
+    assert.ok(market.promotions.some((p) => p.product.productCode === 'S3'));
+  });
+
+  it('tính thời lượng flash sale', () => {
+    assert.equal(duration('2026-11-26 00:00', '2026-11-26 23:59'), '1 ngày');
+    assert.equal(duration('2026-11-26 00:00', '2026-11-28 23:59'), '3 ngày');
+    assert.equal(duration('2026-11-26 09:00', '2026-11-26 11:59'), '3 giờ');
+    assert.equal(duration('2026-11-26 09:00', '2026-11-26 09:29'), '30 phút');
+    assert.equal(duration(null, '2026-11-26 11:59'), null);
+  });
+
   it('chia khoảng giá', () => {
     assert.deepEqual(
       makeBands([400_000, 200_000, 1_500_000]).map((b) => b.label),
@@ -253,6 +297,7 @@ describe('ReportService', () => {
         'Top bán chạy',
         'Phân khúc giá',
         'Khuyến mãi',
+        'Lịch flash sale',
         'Lịch sử giá',
         'Biến động giá',
         'SP mới',

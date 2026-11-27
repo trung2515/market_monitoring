@@ -68,4 +68,18 @@ export const migrations: { id: number; name: string; sql: string }[] = [
       ALTER TABLE price_snapshots ADD COLUMN flash_end TEXT;
     `,
   },
+  {
+    id: 3,
+    name: 'flash_and_other_promotions',
+    sql: `
+      ALTER TABLE price_snapshots ADD COLUMN flash_start TEXT;
+      ALTER TABLE price_snapshots ADD COLUMN flash_hours TEXT;
+      ALTER TABLE price_snapshots ADD COLUMN flash_quota INTEGER;
+      ALTER TABLE price_snapshots ADD COLUMN gift_text TEXT;
+      ALTER TABLE price_snapshots ADD COLUMN gift_value INTEGER;
+      ALTER TABLE price_snapshots ADD COLUMN promo_labels TEXT;
+      ALTER TABLE price_snapshots ADD COLUMN installment TEXT;
+      ALTER TABLE price_snapshots ADD COLUMN other_promos TEXT;
+    `,
+  },
 ];

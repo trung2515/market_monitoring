@@ -9,7 +9,7 @@ import { setColumnWidths, sheetName, writeSheetTitle, writeTable, type ColumnDef
  *  [2] Toàn bộ sản phẩm trong danh mục (mọi hãng), sắp theo giá
  *
  * Hai bảng được xếp cột sao cho các cột cùng vị trí có độ rộng tương đương
- * (vd cột 11 = "Tên đối thủ 1" ở bảng 1 và "Thông số" ở bảng 2).
+ * (vd cột 12 = "Tên đối thủ 1" ở bảng 1 và "Thông số" ở bảng 2).
  */
 export function addCategorySheets(wb: ExcelJS.Workbook, data: ReportData): void {
   const usedNames = new Set(wb.worksheets.map((w) => w.name));
@@ -19,6 +19,7 @@ export function addCategorySheets(wb: ExcelJS.Workbook, data: ReportData): void 
 }
 
 const sold = (v: ProductView) => v.snapshot.soldText?.replace(/^Đã bán\s*/i, '') ?? '';
+const promoText = (v: ProductView) => [v.snapshot.promoLabels, v.snapshot.giftText].filter(Boolean).join('; ');
 
 function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
   const own = data.ownBrand;
@@ -31,6 +32,7 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
     { group: own, header: '% giảm', width: 8, format: 'percent', value: (r) => r.own.snapshot.discountPercent },
     { group: own, header: 'Giá flash sale', width: 13, format: 'money', value: (r) => r.own.snapshot.flashPrice },
     { group: own, header: 'Đã bán', width: 10, value: (r) => sold(r.own) },
+    { group: own, header: 'Quà / KM khác', width: 30, value: (r) => promoText(r.own) },
   ];
 
   for (let i = 0; i < data.maxCompetitors; i++) {
@@ -72,6 +74,7 @@ function allColumns(data: ReportData): ColumnDef<ProductView>[] {
     { header: '% giảm', width: 8, format: 'percent', value: (r) => r.snapshot.discountPercent },
     { header: 'Giá flash sale', width: 13, format: 'money', value: (r) => r.snapshot.flashPrice },
     { header: 'Đã bán', width: 10, value: sold },
+    { header: 'Quà / KM khác', width: 30, value: promoText },
     { header: 'Mã model', width: 14, value: (r) => r.product.modelCode },
     { header: 'Rating', width: 8, format: 'decimal', value: (r) => r.snapshot.rating },
     { header: 'Thông số nổi bật', width: 38, value: (r) => r.product.specs.join('; ') },

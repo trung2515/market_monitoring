@@ -1,6 +1,13 @@
 import type * as ExcelJS from 'exceljs';
 import type { ReportData } from '../../analysis';
-import type { MarketShareRow, PriceBandRow, PriceHistoryRow, PromotionRow, TopSellerRow } from '../../market';
+import type {
+  FlashCalendarRow,
+  MarketShareRow,
+  PriceBandRow,
+  PriceHistoryRow,
+  PromotionRow,
+  TopSellerRow,
+} from '../../market';
 import { isoDayOfWeek } from '../../../utils/date';
 import { normalizeBrand } from '../../../utils/text';
 import { addTableSheet, type ColumnDef } from '../tableSheet';
@@ -93,38 +100,114 @@ export function addPromotionSheet(wb: ExcelJS.Workbook, data: ReportData): void 
   const own = isOwnBrand(data);
   addTableSheet<PromotionRow>(wb, {
     name: 'Khuyến mãi',
-    title: `Sản phẩm đang giảm giá / flash sale (dữ liệu ngày ${data.endDate ?? '—'})`,
+    title: `Tất cả chương trình khuyến mãi đang chạy (dữ liệu ngày ${data.endDate ?? '—'})`,
     subtitle:
-      'Sắp theo mức giảm sâu nhất trong từng danh mục. "Sắp hết" = chương trình giá kết thúc trong vài ngày tới (chỉnh ở report.promoEndingSoonDays).',
+      'Gồm: giảm giá so với giá gốc, flash sale (giờ vàng), quà tặng, nhãn khuyến mãi, trả góp và ưu đãi thanh toán. ' +
+      '"Sắp hết" = chương trình giá sắp kết thúc (số ngày chỉnh ở report.promoEndingSoonDays). Sắp theo mức giảm sâu nhất trong từng danh mục.',
     rows: data.market.promotions,
     highlight: (r) => own(r.product.brand),
     emptyMessage: 'Không có sản phẩm nào đang khuyến mãi.',
     columns: [
-      { header: 'Danh mục', width: 18, value: (r) => r.product.categoryName },
-      { header: 'Hãng', width: 14, value: (r) => r.product.brand },
+      { group: 'Sản phẩm', header: 'Danh mục', width: 16, value: (r) => r.product.categoryName },
+      { group: 'Sản phẩm', header: 'Hãng', width: 13, value: (r) => r.product.brand },
+      { group: 'Sản phẩm', header: 'Mã model', width: 15, value: (r) => r.product.modelCode },
+      { group: 'Sản phẩm', header: 'Tên sản phẩm', width: 45, value: (r) => r.product.name },
+      {
+        group: 'Giảm giá',
+        header: 'Giá gốc (niêm yết)',
+        width: 13,
+        format: 'money',
+        value: (r) => r.snapshot.listPrice,
+      },
+      { group: 'Giảm giá', header: 'Giá bán hiện tại', width: 13, format: 'money', value: (r) => r.snapshot.price },
+      { group: 'Giảm giá', header: '% giảm', width: 8, format: 'percent', value: (r) => r.snapshot.discountPercent },
+      { group: 'Giảm giá', header: 'Áp dụng từ', width: 16, value: (r) => r.snapshot.promoStart ?? '' },
+      { group: 'Giảm giá', header: 'Áp dụng đến', width: 16, value: (r) => r.snapshot.promoEnd ?? '' },
+      { group: 'Giảm giá', header: 'Còn (ngày)', width: 8, format: 'int', value: (r) => r.daysLeft },
+      { group: 'Giảm giá', header: 'Sắp hết', width: 8, value: (r) => (r.endingSoon ? 'Sắp hết' : '') },
+      {
+        group: 'Flash sale (giờ vàng)',
+        header: 'Giá flash sale',
+        width: 13,
+        format: 'money',
+        value: (r) => r.snapshot.flashPrice,
+      },
+      { group: 'Flash sale (giờ vàng)', header: 'Từ', width: 16, value: (r) => r.snapshot.flashStart ?? '' },
+      { group: 'Flash sale (giờ vàng)', header: 'Đến', width: 16, value: (r) => r.snapshot.flashEnd ?? '' },
+      { group: 'Flash sale (giờ vàng)', header: 'Thời lượng', width: 11, value: (r) => r.flashDuration ?? '' },
+      {
+        group: 'Flash sale (giờ vàng)',
+        header: 'Khung giờ',
+        width: 11,
+        value: (r) => (r.snapshot.flashPrice == null ? '' : (r.snapshot.flashHours ?? 'Cả ngày')),
+      },
+      {
+        group: 'Flash sale (giờ vàng)',
+        header: 'Số suất',
+        width: 8,
+        format: 'int',
+        value: (r) => r.snapshot.flashQuota,
+      },
+      { group: 'Khuyến mãi khác', header: 'Quà tặng', width: 40, value: (r) => r.snapshot.giftText ?? '' },
+      {
+        group: 'Khuyến mãi khác',
+        header: 'Giá trị quà',
+        width: 12,
+        format: 'money',
+        value: (r) => r.snapshot.giftValue,
+      },
+      { group: 'Khuyến mãi khác', header: 'Nhãn KM', width: 26, value: (r) => r.snapshot.promoLabels ?? '' },
+      { group: 'Khuyến mãi khác', header: 'Trả góp', width: 14, value: (r) => r.snapshot.installment ?? '' },
+      {
+        group: 'Khuyến mãi khác',
+        header: 'Ưu đãi thanh toán / mã giảm',
+        width: 45,
+        value: (r) => r.snapshot.otherPromos ?? '',
+      },
+      { header: 'Link', width: 8, format: 'link', linkText: () => 'Xem', value: (r) => r.product.url },
+    ],
+  });
+}
+
+export function addFlashCalendarSheet(wb: ExcelJS.Workbook, data: ReportData): void {
+  const own = isOwnBrand(data);
+  const { dates, rows } = data.market.flashCalendar;
+  addTableSheet<FlashCalendarRow>(wb, {
+    name: 'Lịch flash sale',
+    title: `Lịch flash sale (giờ vàng) theo ngày – ${data.period.title}`,
+    subtitle:
+      'Mỗi cột là 1 ngày có dữ liệu; ô có số = hôm đó SP có flash sale với giá đó, ô trống = không có flash sale hoặc không có dữ liệu. Giúp thấy hãng nào chạy flash sale dày, vào ngày nào.',
+    rows,
+    highlight: (r) => own(r.product.brand),
+    emptyMessage: 'Chưa ghi nhận flash sale nào trong kỳ.',
+    columns: [
+      { header: 'Danh mục', width: 16, value: (r) => r.product.categoryName },
+      { header: 'Hãng', width: 13, value: (r) => r.product.brand },
       { header: 'Mã model', width: 15, value: (r) => r.product.modelCode },
-      { header: 'Tên sản phẩm', width: 50, value: (r) => r.product.name },
-      { header: 'Giá gốc (niêm yết)', width: 13, format: 'money', value: (r) => r.snapshot.listPrice },
-      { header: 'Giá bán hiện tại', width: 13, format: 'money', value: (r) => r.snapshot.price },
-      { header: '% giảm', width: 8, format: 'percent', value: (r) => r.snapshot.discountPercent },
-      { header: 'Giá flash sale', width: 13, format: 'money', value: (r) => r.snapshot.flashPrice },
-      { header: 'Flash sale đến', width: 15, value: (r) => r.snapshot.flashEnd ?? '' },
-      { header: 'KM từ', width: 15, value: (r) => r.snapshot.promoStart ?? '' },
-      { header: 'KM đến', width: 15, value: (r) => r.snapshot.promoEnd ?? '' },
-      { header: 'Còn (ngày)', width: 9, format: 'int', value: (r) => r.daysLeft },
-      { header: 'Sắp hết', width: 8, value: (r) => (r.endingSoon ? 'Sắp hết' : '') },
-      { header: 'Link', width: 9, format: 'link', linkText: () => 'Xem', value: (r) => r.product.url },
+      { header: 'Tên sản phẩm', width: 45, value: (r) => r.product.name },
+      { header: 'Giá bán thường', width: 13, format: 'money', value: (r) => r.regularPrice },
+      ...dates.map(
+        (d, i): ColumnDef<FlashCalendarRow> => ({
+          header: dayHeader(d),
+          width: 11,
+          format: 'money',
+          value: (r) => r.flash[i],
+        }),
+      ),
+      { header: 'Số ngày có flash', width: 9, format: 'int', value: (r) => r.flashDays },
+      { header: 'Giá flash thấp nhất', width: 13, format: 'money', value: (r) => r.minFlash },
     ],
   });
 }
 
 const WEEKDAY = ['', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+const dayHeader = (d: string) => `${WEEKDAY[isoDayOfWeek(d)]} ${d.slice(8, 10)}/${d.slice(5, 7)}`;
 
 export function addPriceHistorySheet(wb: ExcelJS.Workbook, data: ReportData): void {
   const own = isOwnBrand(data);
   const dates = data.market.history.dates;
   const dateColumns: ColumnDef<PriceHistoryRow>[] = dates.map((d, i) => ({
-    header: `${WEEKDAY[isoDayOfWeek(d)]} ${d.slice(8, 10)}/${d.slice(5, 7)}`,
+    header: dayHeader(d),
     width: 11,
     format: 'money',
     value: (r) => r.prices[i],

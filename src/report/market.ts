@@ -60,6 +60,18 @@ export interface PromotionRow extends View {
   promoEndDate: string | null;
   daysLeft: number | null;
   endingSoon: boolean;
+  /** Thời lượng flash sale, vd "1 ngày", "3 giờ" */
+  flashDuration: string | null;
+}
+
+export interface FlashCalendarRow {
+  product: StoredProduct;
+  /** Giá flash sale theo từng ngày trong `dates`; null = ngày đó không có flash sale / không có dữ liệu */
+  flash: (number | null)[];
+  flashDays: number;
+  minFlash: number | null;
+  /** Giá bán thường ở ngày cuối cùng có dữ liệu */
+  regularPrice: number | null;
 }
 
 export interface PriceHistoryRow {
@@ -77,6 +89,7 @@ export interface MarketData {
   priceBands: PriceBandRow[];
   promotions: PromotionRow[];
   history: { dates: string[]; rows: PriceHistoryRow[] };
+  flashCalendar: { dates: string[]; rows: FlashCalendarRow[] };
 }
 
 export interface MarketInput {
@@ -177,9 +190,15 @@ export function analyzeMarket(input: MarketInput): MarketData {
     }
   }
 
-  // Khuyến mãi đang chạy: có giảm so với giá gốc hoặc có flash sale
+  // Khuyến mãi đang chạy: giảm so với giá gốc, flash sale, quà tặng hoặc nhãn khuyến mãi
   const promotions: PromotionRow[] = input.current
-    .filter((v) => (v.snapshot.discountPercent ?? 0) > 0 || v.snapshot.flashPrice != null)
+    .filter(
+      (v) =>
+        (v.snapshot.discountPercent ?? 0) > 0 ||
+        v.snapshot.flashPrice != null ||
+        v.snapshot.giftText != null ||
+        v.snapshot.promoLabels != null,
+    )
     .map((v) => {
       const promoEndDate = v.snapshot.promoEnd?.slice(0, 10) ?? null;
       const daysLeft = promoEndDate ? Math.max(0, daysBetween(input.endDate, promoEndDate)) : null;
@@ -188,6 +207,7 @@ export function analyzeMarket(input: MarketInput): MarketData {
         promoEndDate,
         daysLeft,
         endingSoon: daysLeft != null && daysLeft <= input.config.promoEndingSoonDays,
+        flashDuration: duration(v.snapshot.flashStart, v.snapshot.flashEnd),
       };
     })
     .sort(
@@ -221,7 +241,51 @@ export function analyzeMarket(input: MarketInput): MarketData {
       a.product.name.localeCompare(b.product.name, 'vi'),
   );
 
-  return { shares, topSellers, priceBands, promotions, history: { dates: input.crawlDates, rows: historyRows } };
+  // Lịch flash sale: SP có flash sale ít nhất 1 ngày trong kỳ
+  const flashRows: FlashCalendarRow[] = [];
+  for (const [code, list] of input.seriesInPeriod) {
+    const product = input.products.get(code);
+    if (!product || !list.some((s) => s.flashPrice != null)) continue;
+    const byDate = new Map(list.map((s) => [s.crawlDate, s.flashPrice]));
+    const flash = input.crawlDates.map((d) => byDate.get(d) ?? null);
+    const known = flash.filter((p): p is number => p != null);
+    flashRows.push({
+      product,
+      flash,
+      flashDays: known.length,
+      minFlash: known.length ? Math.min(...known) : null,
+      regularPrice: list.at(-1)?.price ?? null,
+    });
+  }
+  flashRows.sort(
+    (a, b) =>
+      orderOf(input.categoryOrder, a.product.categorySlug) - orderOf(input.categoryOrder, b.product.categorySlug) ||
+      b.flashDays - a.flashDays ||
+      a.product.brand.localeCompare(b.product.brand, 'vi'),
+  );
+
+  return {
+    shares,
+    topSellers,
+    priceBands,
+    promotions,
+    history: { dates: input.crawlDates, rows: historyRows },
+    flashCalendar: { dates: input.crawlDates, rows: flashRows },
+  };
+}
+
+/** '2026-11-26 00:00' → '2026-11-26 23:59' = "1 ngày"; 3 tiếng = "3 giờ" */
+export function duration(start: string | null, end: string | null): string | null {
+  if (!start || !end) return null;
+  const ms =
+    new Date(`${end.replace(' ', 'T')}:00+07:00`).getTime() - new Date(`${start.replace(' ', 'T')}:00+07:00`).getTime();
+  if (!Number.isFinite(ms) || ms <= 0) return null;
+  const minutes = Math.round(ms / 60_000) + 1; // 00:00 → 23:59 tính là trọn 1 ngày
+  const days = Math.floor(minutes / 1440);
+  const hours = Math.floor((minutes % 1440) / 60);
+  const mins = minutes % 60;
+  const parts = [days ? `${days} ngày` : '', hours ? `${hours} giờ` : '', mins && !days ? `${mins} phút` : ''];
+  return parts.filter(Boolean).join(' ') || null;
 }
 
 export const emptyMarket = (): MarketData => ({
@@ -230,6 +294,7 @@ export const emptyMarket = (): MarketData => ({
   priceBands: [],
   promotions: [],
   history: { dates: [], rows: [] },
+  flashCalendar: { dates: [], rows: [] },
 });
 
 /** [200k, 400k] → "Dưới 200k", "200k – 400k", "Từ 400k" */
