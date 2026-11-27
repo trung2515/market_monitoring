@@ -1,268 +1,153 @@
-# Market Monitoring – Điện Máy Xanh
+# Theo dõi giá Điện Máy Xanh – Elmich
 
-Công cụ theo dõi giá và sản phẩm của Elmich và các đối thủ (Sunhouse, Lock&Lock, Tefal…) trên **dienmayxanh.com**.
+Công cụ tự lấy giá sản phẩm của **Elmich** và các đối thủ (Sunhouse, Lock&Lock, Tefal…) trên **dienmayxanh.com**, rồi xuất báo cáo Excel để phân tích thị trường.
 
-- Tự **cào dữ liệu hằng ngày** theo lịch: mã SP, giá niêm yết, giá bán, % giảm, giá flash sale, số đã bán, rating, thông số chính.
-- Giao diện web có nút **Xuất Excel theo tuần / tháng / khoảng tuỳ chọn**, lọc được theo danh mục và thương hiệu.
-- Báo cáo Excel gồm: Tổng quan · **1 sheet cho mỗi danh mục** (Elmich + đối thủ cùng tầm giá, và toàn bộ sản phẩm) · Thị phần · Top bán chạy · Phân khúc giá · Khuyến mãi · Lịch flash sale · Lịch sử giá · Biến động giá · SP mới · Ngừng hiển thị · Lượt bán.
+- **Link web:** https://elmich-monitor.dinhtrung2515.workers.dev (đăng nhập bằng tài khoản đã đặt).
+- Mỗi sáng **8:17** hệ thống tự lấy dữ liệu, không cần bật máy.
+- Trên web có 2 nút chính: **Lấy data hôm nay** và **Tải file Excel** (theo tuần, tháng hoặc khoảng ngày tuỳ chọn).
 
 ---
 
-## 1. Yêu cầu
+## 1. Dùng hằng ngày
 
-- **Node.js ≥ 22.13** (khuyên dùng Node 24 LTS). Dự án dùng SQLite có sẵn trong Node (`node:sqlite`), **không cần cài database**.
-- Máy chạy phải truy cập được `api.dienmayxanh.com`.
+1. Mở link web và đăng nhập.
+2. Chọn kỳ báo cáo (**Theo tuần / Theo tháng / Tuỳ chọn**), chọn danh mục và thương hiệu nếu cần lọc.
+3. Bấm **Tải file Excel**.
 
-## 2. Chạy thử trên máy
+Nút **Lấy data hôm nay** chỉ cần bấm khi muốn có giá mới nhất ngay lúc đó, ví dụ đang có flash sale. Mất khoảng dưới 1 phút. Lỡ đóng trang giữa chừng cũng không sao: hệ thống tự làm tiếp trong vòng 10 phút. Lấy lại trong cùng ngày sẽ ghi đè dữ liệu ngày đó, không bị trùng.
 
-```bash
-npm install
-cp .env.example .env          # Windows: copy .env.example .env
-npm run crawl                 # cào 1 lượt ngay (mất ~1–2 phút)
-npm run dev                   # mở http://localhost:3000
-```
+> Hệ thống chỉ có dữ liệu **từ ngày bắt đầu chạy**. ĐMX không cho xem lại giá của các ngày đã qua. Ngày nào không lấy được dữ liệu thì để trống.
 
-Các lệnh khác:
+## 2. File Excel có gì
 
-| Lệnh                                                                                           | Việc làm                                        |
-| ---------------------------------------------------------------------------------------------- | ----------------------------------------------- |
-| `npm run dev`                                                                                  | Chạy web + lịch cào, tự reload khi sửa code     |
-| `npm run crawl`                                                                                | Cào 1 lượt ngay từ dòng lệnh                    |
-| `npm run export -- --period week`                                                              | Xuất Excel tuần hiện tại vào thư mục `reports/` |
-| `npm run export -- --period month --date 2026-11-01`                                           | Xuất Excel tháng 11/2026                        |
-| `npm run export -- --period custom --from 2026-11-01 --to 2026-11-15 --brands Elmich,Sunhouse` | Khoảng tuỳ chọn, lọc hãng                       |
-| `npm test`                                                                                     | Chạy unit test                                  |
-| `npm run typecheck`                                                                            | Kiểm tra kiểu TypeScript                        |
-| `npm run build` → `npm start`                                                                  | Build & chạy bản production                     |
+| Sheet                                    | Nội dung                                                                                                                                                                                |
+| ---------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **Tổng quan**                            | Số liệu tóm tắt theo danh mục và hãng                                                                                                                                                   |
+| **Mỗi danh mục 1 sheet** (Chảo, Nồi, …) | **Bảng [1]:** mỗi dòng là 1 sản phẩm Elmich, bên cạnh là tối đa 3 đối thủ cùng tầm giá. **Bảng [2]:** toàn bộ sản phẩm của mọi hãng trong danh mục                                      |
+| **Thị phần**                             | Xếp hạng các hãng theo số lượng đã bán                                                                                                                                                  |
+| **Top bán chạy**                         | 10 sản phẩm bán chạy nhất mỗi danh mục                                                                                                                                                  |
+| **Phân khúc giá**                        | Số sản phẩm theo từng khoảng giá, khoảng giá nào Elmich chưa có hàng                                                                                                                    |
+| **Khuyến mãi**                           | Mọi chương trình đang chạy: giảm giá, flash sale (giờ bắt đầu – kết thúc, số suất), quà tặng, trả góp                                                                                  |
+| **Lịch flash sale**                      | Giá flash sale theo từng ngày                                                                                                                                                           |
+| **Lịch sử giá**                          | Giá bán theo từng ngày, mỗi ngày một cột                                                                                                                                                |
+| **Biến động giá**                        | Sản phẩm đổi giá trong kỳ                                                                                                                                                               |
+| **SP mới / Ngừng hiển thị**              | Sản phẩm mới xuất hiện / biến mất trong kỳ                                                                                                                                              |
+| **Lượt bán**                             | Số bán thêm trong kỳ của từng sản phẩm                                                                                                                                                  |
 
-### Format code (Prettier)
+**Các cột giá:**
 
-Dự án dùng **Prettier**, cấu hình trong `.prettierrc.json`: nháy đơn, có dấu `;`, tối đa 120 ký tự mỗi dòng.
+- **Giá niêm yết:** giá gốc (giá gạch ngang trên web).
+- **Giá bán hiện tại:** giá đang bán (đã giảm).
+- **Giá flash sale:** giá giờ vàng, kèm **thời gian flash** (từ giờ nào đến giờ nào).
 
-- **VS Code:** cài extension **Prettier – Code formatter** (`esbenp.prettier-vscode`). VS Code sẽ tự gợi ý khi mở dự án. File `.vscode/settings.json` đã bật **format khi lưu**.
-- **Dòng lệnh:** `npm run format` để format toàn bộ, `npm run format:check` để kiểm tra mà không sửa file.
+**Các cột số lượng bán:**
 
-> Node 22 có thể in cảnh báo `ExperimentalWarning: SQLite is an experimental feature` – không ảnh hưởng.
+- **Đã bán:** tổng đã bán cộng dồn từ trước tới nay, số chính xác do ĐMX trả về (trên web họ chỉ hiện làm tròn, ví dụ "25,2k").
+- **Bán trong ngày / tuần / tháng:** ĐMX không công bố số bán theo ngày, nên hệ thống lấy tổng đã bán của ngày cuối báo cáo trừ đi tổng đã bán của hôm trước / trước đầu tuần / trước đầu tháng. Đây là **số ước tính**, dùng để so sánh giữa các sản phẩm và các hãng.
 
-## 3. Cấu hình
+**Đối thủ cùng tầm giá:** giá bán chênh trong khoảng ±20% so với sản phẩm Elmich, ưu tiên cùng kích thước rồi đến giá gần nhất.
 
-### `.env` – cấu hình kỹ thuật
+**Màu sắc:** nền xanh lá nhạt là sản phẩm Elmich. Nền cam nhạt là chỗ cần chú ý, ví dụ sản phẩm Elmich chưa có đối thủ cùng tầm giá.
 
-Xem chú thích trong [.env.example](.env.example). Quan trọng:
+## 3. Đổi danh mục, đối thủ, giờ chạy
 
-- `AUTH_USER` / `AUTH_PASSWORD`: bật đăng nhập cho web (**bắt buộc khi đưa lên Internet**).
-- `CRAWL_CRON`: giờ cào tự động (mặc định `17 8 * * *` = 8:17 sáng mỗi ngày, giờ VN).
-- `DMX_PROVINCE_ID`: khu vực giá. Giữ cố định để số liệu các kỳ so sánh được với nhau.
-- `DMX_REQUEST_DELAY_MS`: nghỉ giữa các request (mặc định 2 giây). Đừng hạ quá thấp.
+| Muốn đổi                                   | Sửa ở đâu                                                                                       |
+| ------------------------------------------ | ----------------------------------------------------------------------------------------------- |
+| Thêm / bớt danh mục, đối thủ               | `config/tracking.json`                                                                          |
+| Khoảng giá "cùng tầm giá" (mặc định ±20%) | `config/tracking.json` → `segment.priceTolerancePercent`                                        |
+| Giờ tự lấy dữ liệu trên Cloudflare        | `wrangler.jsonc` (mục `crons`) **và** `DAILY_CRON` trong `src/worker/index.ts`. Giờ ghi theo UTC = giờ VN − 7 |
 
-### `config/tracking.json` – cấu hình nghiệp vụ (không cần sửa code)
+**Thêm danh mục mới:** mở danh mục trên dienmayxanh.com, ví dụ `https://www.dienmayxanh.com/binh-ly-giu-nhiet`, lấy phần cuối `binh-ly-giu-nhiet` làm `slug`:
 
 ```jsonc
-{
-  "ownBrand": "Elmich", // thương hiệu của công ty mình
-  "competitorBrands": ["Sunhouse", "Lock&Lock"], // đối thủ chính (dùng cho bộ lọc nhanh trên web)
-  "categories": [
-    // danh mục cần theo dõi
-    { "slug": "chao-chong-dinh", "name": "Chảo" }, // slug = phần đường dẫn trên dienmayxanh.com
-  ],
-  "report": {
-    "topSellersPerCategory": 10, // số SP trong sheet Top bán chạy
-    "priceBands": [200000, 400000, 700000, 1000000, 2000000], // mốc khoảng giá
-    "promoEndingSoonDays": 7, // KM kết thúc trong 7 ngày = "Sắp hết"
-  },
-  "segment": {
-    "priceTolerancePercent": 20, // đối thủ có giá bán trong ±20% giá Elmich = cùng tầm giá
-    "maxCompetitorsPerProduct": 3, // số đối thủ hiện cạnh mỗi sản phẩm Elmich
-    "onlyListedCompetitors": false, // true = chỉ so với competitorBrands
-    "manualPairs": [
-      // ghép tay khi quy tắc tự động chưa đúng (theo mã model)
-      { "own": "EL-5753MN", "competitor": "SBDS28MT", "note": "..." },
-    ],
-  },
-}
+{ "slug": "binh-ly-giu-nhiet", "name": "Bình, ly giữ nhiệt" }
 ```
 
-**Thêm danh mục mới:** mở danh mục trên web ĐMX, ví dụ `https://www.dienmayxanh.com/binh-ly-giu-nhiet`, rồi lấy phần cuối `binh-ly-giu-nhiet` làm `slug`. Thêm `"enabled": false` để tạm tắt một danh mục. Sửa xong thì khởi động lại app.
+Sửa xong thì deploy lại (mục 4).
 
-## 4. Báo cáo Excel
+## 4. Cập nhật web trên Cloudflare
 
-| Sheet                                                    | Nội dung                                                                                                                                                                                                                                                                                                             |
-| -------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **Tổng quan**                                            | Theo danh mục × hãng: số SKU, giá TB/min/max, % giảm TB, số SKU flash sale, SKU mới/ngừng, số SKU tăng/giảm giá, lượt bán tăng thêm. Bên phải là thông tin kỳ và các cảnh báo dữ liệu                                                                                                                                |
-| **Mỗi danh mục 1 sheet** (Chảo, Nồi, Bình đun siêu tốc…) | **[1]** Mỗi dòng là 1 sản phẩm Elmich: mã, tên, kích thước, giá niêm yết, giá bán, % giảm, giá flash sale, đã bán. Bên phải là **3 đối thủ cùng tầm giá** (hãng, mã, tên, giá bán, flash sale, % chênh). **[2]** Toàn bộ sản phẩm của mọi hãng trong danh mục, sắp theo giá, có cột đổi giá trong kỳ / SP mới / link |
-| **Thị phần**                                             | Mỗi danh mục: xếp hạng các hãng theo lượt bán cộng dồn, % SKU, % lượt bán (thị phần), giá TB, % giảm TB                                                                                                                                                                                                              |
-| **Top bán chạy**                                         | Top 10 sản phẩm bán chạy nhất mỗi danh mục (đổi số lượng ở `report.topSellersPerCategory`)                                                                                                                                                                                                                           |
-| **Phân khúc giá**                                        | Mỗi danh mục × khoảng giá: tổng SKU, số SKU và % lượt bán của Elmich, các hãng nhiều SKU nhất. Dòng nền cam nhạt = khoảng giá Elmich chưa có sản phẩm. Mốc giá ở `report.priceBands`                                                                                                                                 |
-| **Khuyến mãi**                                           | **Tất cả chương trình khuyến mãi** đang chạy: giảm giá (giá niêm yết → giá bán, áp dụng từ – đến, còn bao nhiêu ngày, "Sắp hết"), **flash sale / giờ vàng** (giá, từ giờ – đến giờ, thời lượng, khung giờ, số suất), **quà tặng** và giá trị quà, nhãn khuyến mãi, trả góp, ưu đãi thanh toán / mã giảm giá          |
-| **Lịch flash sale**                                      | Sản phẩm có flash sale trong kỳ: giá flash theo từng ngày (ô trống = hôm đó không có flash sale), số ngày có flash sale, giá flash thấp nhất. Cho thấy hãng nào chạy flash sale dày và vào ngày nào                                                                                                                  |
-| **Lịch sử giá**                                          | Giá bán theo từng ngày trong kỳ, mỗi ngày một cột. **Ô trống = ngày đó không có dữ liệu**. Có giá thấp/cao nhất và số lần đổi giá                                                                                                                                                                                    |
-| **Biến động giá**                                        | SKU đổi giá giữa đầu kỳ và cuối kỳ: chênh lệch, %, giá min/max trong kỳ, số lần đổi giá                                                                                                                                                                                                                              |
-| **SP mới**                                               | SKU lần đầu xuất hiện trong kỳ                                                                                                                                                                                                                                                                                       |
-| **Ngừng hiển thị**                                       | SKU có ở đầu kỳ nhưng biến mất ở cuối kỳ (hết hàng, ngừng bán, bị ẩn)                                                                                                                                                                                                                                                |
-| **Lượt bán**                                             | Lượt bán tăng thêm (ước tính từ bộ đếm "đã bán" công khai) và doanh thu ước tính                                                                                                                                                                                                                                     |
+Mỗi khi sửa code hoặc cấu hình, mở PowerShell trong thư mục dự án và chạy:
 
-Dòng của Elmich có nền **xanh lá nhạt**. Dòng nền **cam nhạt** là chỗ cần chú ý, ví dụ ở bảng [1] là sản phẩm Elmich chưa tìm được đối thủ cùng tầm giá. Màu sắc và font của toàn bộ file chỉnh trong `src/report/excel/theme.ts`.
-
-**Cách chọn "đối thủ cùng tầm giá"** (chỉnh trong `config/tracking.json` → `segment`):
-
-- Giá bán của đối thủ chênh trong **±`priceTolerancePercent`%** (mặc định 20%) so với giá bán của Elmich, và cùng loại bộ/lẻ.
-- Trong số đó, ưu tiên sản phẩm **cùng kích thước/dung tích**, sau đó đến sản phẩm có giá gần nhất. Mỗi sản phẩm Elmich lấy tối đa `maxCompetitorsPerProduct` đối thủ (mặc định 3).
-- `onlyListedCompetitors: true` để chỉ so với các hãng trong `competitorBrands`. Mặc định là `false`, tức so với mọi hãng khác.
-- `manualPairs`: ghép tay theo mã model, ví dụ `{ "own": "EL-5753MN", "competitor": "SBDS28MT" }`. Cặp ghép tay luôn đứng đầu danh sách đối thủ.
-
-**Mốc so sánh "đầu kỳ"** là ngày có dữ liệu gần nhất _trước_ ngày bắt đầu kỳ. Ví dụ báo cáo tuần 23–29/11 so dữ liệu ngày 22/11 (hoặc ngày gần nhất trước đó) với ngày có dữ liệu cuối cùng trong tuần. Nếu chưa có dữ liệu trước kỳ, hệ thống dùng ngày đầu tiên trong kỳ và ghi chú trong sheet Tổng quan.
-
-> Hệ thống chỉ biết biến động **từ ngày bắt đầu chạy**. Báo cáo tuần đầu tiên sẽ chưa có nhiều thông tin; sau 1–2 tuần cào đều đặn số liệu mới đầy đủ.
-
-## 5. Kiến trúc
-
-```
-src/
-├─ config/        env.ts (.env, zod) · tracking.ts (parse config) · trackingLoader.ts (đọc file, chỉ Node)
-├─ domain/        types.ts – mô hình dữ liệu chung (Product, PriceSnapshot, CrawlRun)
-├─ crawler/
-│  ├─ dmx/        client.ts (gọi API ĐMX, phân trang, retry) · schema.ts (zod) · normalize.ts (JSON → domain)
-│  └─ crawlEngine.ts – cào THEO TỪNG BƯỚC (mỗi bước 1 trang), tiến độ lưu ở bảng crawl_jobs
-├─ db/            sql.ts (interface SqlDriver + driver node:sqlite) · sqlStore.ts (TOÀN BỘ câu SQL) · migrations.ts
-├─ api/           handlers.ts – API dùng chung cho Express (Node) và Cloudflare Worker
-├─ report/
-│  ├─ period.ts   tính kỳ tuần/tháng
-│  ├─ analysis.ts · market.ts – TOÀN BỘ logic phân tích (hàm thuần, có test)
-│  ├─ excel/      tableSheet.ts (helper tạo sheet) · columns.ts (bộ cột dùng lại) · sheets/ · workbook.ts
-│  └─ reportBuilder.ts – nguồn dữ liệu → analysis (dùng cho cả CLI và trình duyệt)
-├─ client/        report.ts – tạo Excel NGAY TRÊN TRÌNH DUYỆT (esbuild → public/report.bundle.js)
-├─ worker/        index.ts (Cloudflare Worker: web + cron) · d1Driver.ts · auth.ts
-├─ web/           app.ts (Express) · auth.ts (Basic Auth) · diag.ts
-├─ jobs/          scheduler.ts (node-cron)
-├─ cli/           crawl.ts · export.ts
-├─ container.ts   composition root cho bản Node
-└─ index.ts       khởi động server Node
-public/           giao diện web (HTML/CSS/JS thuần)
-scripts/          gen-d1-migrations.ts · export-d1-data.ts (cho Cloudflare)
-cloudflare/       migrations/ – file SQL cho D1, sinh tự động từ src/db/migrations.ts
-tests/            unit test (node:test), fixtures/ = JSON thật từ API ĐMX, fakeD1.ts = giả lập D1
+```powershell
+git pull
+npm run cf:deploy
 ```
 
-**Luồng dữ liệu:** lịch (node-cron hoặc Cloudflare Cron) / nút "Lấy data hôm nay" → `CrawlEngine.start` tạo job trang đầu cho mỗi danh mục → mỗi `step()` lấy 1 trang qua `DmxClient` → `normalize` → `SqlStore` (SQLite trên máy hoặc D1 trên Cloudflare).
-Khi bấm xuất: trình duyệt tải dữ liệu qua `/api/report/*` → `reportBuilder` + `analysis` → `excel/workbook` → tải file về.
-Cùng một code chạy được trên **Node** (máy cá nhân / VPS) và **Cloudflare Workers**.
+Các lệnh Cloudflare khác:
 
-**Bảng dữ liệu:**
+| Lệnh                     | Việc làm                                                         |
+| ------------------------ | ---------------------------------------------------------------- |
+| `npm run cf:pull-data`   | Kéo dữ liệu trên Cloudflare về máy (gộp vào `data/market.db`)    |
+| `npm run cf:export-data` | Xuất dữ liệu trên máy ra file, chuẩn bị đưa lên Cloudflare       |
+| `npm run cf:import-data` | Đưa file vừa xuất lên Cloudflare (chạy lại nhiều lần không trùng) |
+| `npx wrangler tail`      | Xem log trực tiếp của web trên Cloudflare                        |
+| `npx wrangler login`     | Đăng nhập lại Cloudflare nếu bị hỏi                              |
 
-- `products`: 1 dòng/SKU, có `first_seen_date` và `last_seen_date`.
-- `price_snapshots`: 1 dòng/SKU/ngày. Cào lại trong ngày sẽ ghi đè, không nhân đôi.
-- `crawl_runs`: nhật ký mỗi lượt cào (trạng thái, số SP, cảnh báo, lỗi).
-- `crawl_jobs`: các trang cần cào của mỗi lượt (chờ / đang chạy / xong / lỗi, số lần thử).
+> **Cloudflare và máy là 2 nơi lưu dữ liệu riêng**, không tự đồng bộ. Hãy coi Cloudflare là nơi lưu chính và dùng link web. Khi cần chạy trên máy với đủ dữ liệu thì chạy `npm run cf:pull-data`.
 
-### Hướng dẫn bảo trì nhanh
+<details>
+<summary>Cài đặt Cloudflare từ đầu (chỉ làm 1 lần, đã làm xong)</summary>
 
-| Muốn…                                                      | Sửa ở đâu                                                                                                                   |
-| ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Thêm/bớt danh mục, đối thủ                                 | `config/tracking.json`                                                                                                      |
-| Thêm/bớt cột trong Excel                                   | mảng cột trong `src/report/excel/sheets/*.ts` (sheet danh mục: `categorySheets.ts`)                                         |
-| Thêm sheet mới                                             | viết hàm `addXxxSheet` rồi thêm vào mảng `SHEETS` trong `excel/workbook.ts`                                                 |
-| Đổi quy tắc chọn đối thủ cùng tầm giá / định nghĩa SP mới… | `src/report/analysis.ts` (`findCompetitors`, + test trong `tests/report.test.ts`)                                           |
-| Trích mã model / kích thước sai                            | `src/utils/text.ts` (+ `tests/text.test.ts`)                                                                                |
-| Thêm trường dữ liệu mới từ ĐMX                             | `crawler/dmx/schema.ts` → `normalize.ts` → `domain/types.ts` → thêm **migration mới** trong `db/migrations.ts` (rồi `npm run cf:migrations`) → `db/sqlStore.ts` |
-| Theo dõi thêm sàn khác (TGDĐ, Shopee…)                     | viết client + normalize mới trả về `CrawledProduct`; phần DB/báo cáo dùng lại được                                          |
-
-### Khi ĐMX thay đổi API
-
-Crawler validate JSON bằng zod. Nếu ĐMX đổi cấu trúc, lượt cào sẽ báo lỗi rõ ràng (xem bảng "Lần cào gần đây" trên web hoặc log), không ghi dữ liệu sai vào DB. Ngoài ra, nếu số SP của một danh mục giảm hơn 50% so với lần trước, hệ thống sẽ cảnh báo.
-
-Cách tìm API mới: mở trang danh mục bằng Chrome, mở DevTools → tab **Network** → lọc **Fetch/XHR** → bấm "Xem thêm" để thấy request mới. Sau đó cập nhật `DMX_CATEGORY_API`, body hoặc header trong `crawler/dmx/client.ts`, và cập nhật `schema.ts`.
-
-## 6. Chạy miễn phí trên Cloudflare (khuyên dùng)
-
-Cloudflare Workers gói free: web có link riêng `https://elmich-monitor.<tên>.workers.dev`, database D1 500 MB, cron tự chạy, **không cần bật máy**.
-Gói free giới hạn ~10 ms CPU mỗi lần chạy, nên:
-
-- Cào **theo từng bước**: cron chạy mỗi phút từ 8:17 đến 8:59 sáng (giờ VN), mỗi lần lấy 1 trang (50 SP). Toàn bộ 9 danh mục xong trong khoảng 15–25 phút.
-- Nút "Lấy data hôm nay": trình duyệt gọi lần lượt từng bước và hiện tiến độ. Đóng trang giữa chừng cũng không sao, cron 10 phút một lần sẽ làm tiếp phần còn lại.
-- File Excel được **tạo trên trình duyệt** (`public/report.bundle.js`), máy chủ chỉ trả dữ liệu thô.
-
-### Lần đầu (làm trên máy cá nhân, chỉ 1 lần)
-
-```bash
+```powershell
 npm install
-npx wrangler login                       # mở trình duyệt để đăng nhập Cloudflare
-npx wrangler d1 create elmich-monitor    # copy "database_id" in ra, dán vào wrangler.jsonc
-npm run cf:migrate                       # tạo bảng trên D1
+npx wrangler login                       # bấm Allow trên trình duyệt
+npx wrangler d1 create elmich-monitor    # dán database_id vào wrangler.jsonc
+npm run cf:migrate                       # tạo bảng
 npx wrangler secret put AUTH_USER        # tên đăng nhập web
 npx wrangler secret put AUTH_PASSWORD    # mật khẩu web
-npm run cf:deploy                        # build + deploy, in ra link web
+npm run cf:deploy
 ```
 
-Chép dữ liệu đã cào trên máy (`data/market.db`) lên D1 (không bắt buộc):
+Gói miễn phí của Cloudflare chỉ cho mỗi lần chạy rất ít thời gian xử lý, nên hệ thống lấy dữ liệu theo **từng trang** (50 sản phẩm một lần). Từ 8:17 sáng, mỗi phút lấy 1 trang, khoảng 8:45 là xong. File Excel được tạo ngay trên trình duyệt.
 
-```bash
-npm run cf:export-data     # → data/d1-import.sql
-npm run cf:import-data     # nạp lên D1, chạy lại nhiều lần không bị trùng
+</details>
+
+## 5. Chạy trên máy (dành cho người sửa code)
+
+Cần **Node.js 22.13 trở lên**.
+
+```powershell
+npm install
+copy .env.example .env      # rồi mở .env đặt AUTH_USER / AUTH_PASSWORD
+npm run dev                 # mở http://localhost:3000, tự tải lại khi sửa code
 ```
 
-Ngược lại, kéo dữ liệu Cloudflare đã tự cào về máy (để chạy local có đủ các ngày):
+| Lệnh                              | Việc làm                                   |
+| --------------------------------- | ------------------------------------------ |
+| `npm run crawl`                   | Lấy dữ liệu 1 lượt ngay                    |
+| `npm run export -- --period week` | Xuất Excel tuần này vào thư mục `reports/` |
+| `npm test`                        | Chạy kiểm thử                              |
+| `npm run typecheck`               | Kiểm tra lỗi TypeScript                    |
+| `npm run format`                  | Định dạng code (VS Code tự làm khi lưu)    |
 
-```bash
-npm run cf:pull-data       # gộp vào data/market.db, dữ liệu chỉ có ở máy vẫn giữ nguyên
-```
+Bản trên máy lưu dữ liệu vào `data/market.db`, tự lấy dữ liệu theo `CRAWL_CRON` trong `.env` (mặc định 8:17 sáng) nếu máy đang bật.
 
-> Cloudflare và máy là **2 database riêng**, không tự đồng bộ. Nên coi Cloudflare là nơi lưu chính và dùng link web.
-
-### Khi sửa code
-
-| Thay đổi                       | Lệnh                                              |
-| ------------------------------ | ------------------------------------------------- |
-| Sửa code / giao diện           | `npm run cf:deploy`                               |
-| Thêm migration trong `db/`     | `npm run cf:migrations` → `npm run cf:migrate`    |
-| Xem log trực tiếp              | `npx wrangler tail`                               |
-| Chạy thử bản Worker trên máy   | `npm run cf:dev`                                  |
-
-Không đặt secret (`AUTH_USER`, `AUTH_PASSWORD`) thì web trả lỗi 503 thay vì mở công khai.
-
-## 7. Deploy lên VPS (Ubuntu)
-
-```bash
-# 1. Cài Node 24 + pm2
-curl -fsSL https://deb.nodesource.com/setup_24.x | sudo -E bash -
-sudo apt-get install -y nodejs
-sudo npm i -g pm2
-
-# 2. Lấy code
-git clone <repo-cua-ban> market_monitoring && cd market_monitoring
-npm ci
-cp .env.example .env && nano .env      # đặt AUTH_USER / AUTH_PASSWORD
-npm run build
-
-# 3. Chạy nền + tự khởi động cùng máy
-pm2 start ecosystem.config.cjs
-pm2 save && pm2 startup
-
-# Cập nhật code về sau
-git pull && npm ci && npm run build && pm2 restart market-monitoring
-```
-
-Đặt **Caddy** hoặc **Nginx** phía trước để có HTTPS. Ví dụ Caddyfile:
+### Code nằm ở đâu
 
 ```
-monitor.ten-mien-cua-ban.vn {
-  reverse_proxy localhost:3000
-}
+config/tracking.json   danh mục, đối thủ, quy tắc so sánh
+src/crawler/           gọi API Điện Máy Xanh, lấy dữ liệu theo từng trang
+src/db/                lưu dữ liệu (dùng chung cho máy và Cloudflare)
+src/report/            phân tích số liệu (analysis.ts, market.ts, sales.ts) và dựng Excel (excel/)
+src/api/               API cho web
+src/worker/            bản chạy trên Cloudflare
+src/client/            tạo file Excel trên trình duyệt
+public/                giao diện web
+tests/                 kiểm thử
 ```
 
-**Hoặc dùng Docker** (cần commit file `package-lock.json`, file này được tạo ra khi chạy `npm install` lần đầu):
+| Muốn…                       | Sửa ở đâu                                                                         |
+| --------------------------- | --------------------------------------------------------------------------------- |
+| Thêm / bớt cột trong Excel  | `src/report/excel/sheets/*.ts` (sheet danh mục: `categorySheets.ts`)              |
+| Đổi màu, font Excel         | `src/report/excel/theme.ts`                                                       |
+| Đổi cách chọn đối thủ       | `src/report/analysis.ts` (`findCompetitors`)                                      |
+| Thêm trường dữ liệu mới     | `crawler/dmx/schema.ts` → `normalize.ts` → thêm migration trong `db/migrations.ts`, chạy `npm run cf:migrations` rồi `npm run cf:migrate` |
 
-```bash
-docker build -t market-monitoring .
-docker run -d --name market-monitoring --restart unless-stopped \
-  -p 3000:3000 --env-file .env -v $(pwd)/data:/app/data market-monitoring
-```
+**Khi ĐMX đổi API:** lượt lấy dữ liệu sẽ báo lỗi rõ ràng ở mục "Các lần gần đây" trên web, không ghi dữ liệu sai. Mở trang danh mục bằng Chrome → DevTools (F12) → tab **Network** → lọc **Fetch/XHR** → bấm "Xem thêm" để thấy API mới, rồi sửa `src/crawler/dmx/client.ts` và `schema.ts`.
 
-**Sao lưu:** toàn bộ dữ liệu nằm trong `data/market.db`. Chỉ cần sao lưu file này định kỳ.
+## 6. Lưu ý
 
-> Nên dùng VPS đặt tại Việt Nam: IP Việt Nam giống người dùng thật hơn và ít bị ĐMX chặn hơn. Chỉ chạy **1 instance** để tránh cào trùng và tranh chấp ghi SQLite.
-
-## 8. Lưu ý sử dụng
-
-- Hệ thống chỉ đọc **dữ liệu công khai** (không đăng nhập), tốc độ thấp (nghỉ 2 giây giữa các request, mỗi ngày một lượt). Nên đọc điều khoản sử dụng của ĐMX và giữ tần suất hợp lý.
-- "Đã bán" là con số ĐMX hiển thị công khai, chỉ dùng để tham khảo **xu hướng**, không phải doanh số thực.
-- Giá có thể khác nhau theo tỉnh/thành. Báo cáo dùng một khu vực cố định (`DMX_PROVINCE_ID`).
+- Hệ thống chỉ đọc **dữ liệu công khai**, mỗi ngày một lượt, tốc độ chậm để không làm phiền ĐMX.
+- Số "đã bán" là con số ĐMX hiển thị công khai, chỉ nên dùng để xem **xu hướng**, không phải doanh số thật.
+- Giá có thể khác nhau theo tỉnh/thành. Hệ thống luôn dùng một khu vực cố định để các kỳ so sánh được với nhau.
