@@ -14,24 +14,16 @@
   ],
   "categories": [
     {
-      "slug": "chao-chong-dinh",
-      "name": "Chảo"
+      "slug": "ban-ui",
+      "name": "Bàn ủi"
     },
     {
-      "slug": "noi",
-      "name": "Nồi"
+      "slug": "bep-hong-ngoai",
+      "name": "Bếp hồng ngoại"
     },
     {
-      "slug": "noi-ap-suat",
-      "name": "Nồi áp suất"
-    },
-    {
-      "slug": "binh-ly-giu-nhiet",
-      "name": "Bình, ly giữ nhiệt"
-    },
-    {
-      "slug": "hop-dung-thuc-pham",
-      "name": "Hộp đựng thực phẩm"
+      "slug": "bep-tu",
+      "name": "Bếp từ"
     },
     {
       "slug": "binh-dun-sieu-toc",
@@ -42,8 +34,68 @@
       "name": "Bình đựng nước"
     },
     {
+      "slug": "binh-ly-giu-nhiet",
+      "name": "Bình, ly giữ nhiệt"
+    },
+    {
+      "slug": "chao-chong-dinh",
+      "name": "Chảo"
+    },
+    {
       "slug": "dao-lam-bep",
       "name": "Dao làm bếp"
+    },
+    {
+      "slug": "hop-dung-thuc-pham",
+      "name": "Hộp đựng thực phẩm"
+    },
+    {
+      "slug": "lau-dien",
+      "name": "Lẩu điện"
+    },
+    {
+      "slug": "lo-nuong",
+      "name": "Lò nướng"
+    },
+    {
+      "slug": "may-ep-trai-cay",
+      "name": "Máy ép trái cây"
+    },
+    {
+      "slug": "may-lam-sua-hat",
+      "name": "Máy làm sữa hạt"
+    },
+    {
+      "slug": "may-say-toc",
+      "name": "Máy sấy tóc"
+    },
+    {
+      "slug": "may-xay-sinh-to",
+      "name": "Máy xay sinh tố"
+    },
+    {
+      "slug": "may-xay-thit",
+      "name": "Máy xay thịt"
+    },
+    {
+      "slug": "noi",
+      "name": "Nồi"
+    },
+    {
+      "slug": "noi-ap-suat",
+      "name": "Nồi áp suất"
+    },
+    {
+      "slug": "noi-chien-khong-dau",
+      "name": "Nồi chiên không dầu"
+    },
+    {
+      "slug": "noi-com-dien",
+      "name": "Nồi cơm điện"
+    },
+    {
+      "slug": "noi-nau-cham",
+      "name": "Nồi nấu chậm"
     },
     {
       "slug": "thot",
@@ -58,7 +110,13 @@
   },
   "report": {
     "topSellersPerCategory": 10,
-    "priceBands": [200000, 400000, 700000, 1000000, 2000000],
+    "priceBands": [
+      200000,
+      400000,
+      700000,
+      1000000,
+      2000000
+    ],
     "promoEndingSoonDays": 7
   }
 }

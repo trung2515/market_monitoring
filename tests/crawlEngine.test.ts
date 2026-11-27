@@ -119,7 +119,7 @@ for (const [label, makeDriver] of [
       // Thêm bằng link ĐMX
       const added = await call('POST', '/api/categories', 'url=https://www.dienmayxanh.com/noi-com-dien?sort=1');
       assert.equal(added?.status, 200);
-      assert.equal((await list()).at(-1)?.slug, 'noi-com-dien');
+      assert.ok((await list()).some((c) => c.slug === 'noi-com-dien'));
       assert.equal((await call('POST', '/api/categories', 'url=https://google.com/abc'))?.status, 400);
       assert.equal((await call('POST', '/api/categories', 'url=khong-ton-tai'))?.status, 400);
 
@@ -135,11 +135,33 @@ for (const [label, makeDriver] of [
       assert.equal((await call('POST', '/api/categories/delete', 'slug=chao-chong-dinh'))?.status, 409);
       assert.equal((await call('POST', '/api/categories/delete', 'slug=slug-sai'))?.status, 200);
       assert.deepEqual(
-        (await list()).map((c) => [c.slug, c.enabled]),
+        (await list()).map((c) => [c.slug, c.enabled]).sort(),
         [
           ['chao-chong-dinh', true],
           ['noi-com-dien', false],
         ],
+      );
+
+      // Thêm danh mục mới vào file config → tự nạp; danh mục đã xoá trên web không bị nạp lại
+      const api2 = createApi({
+        store,
+        engine,
+        client,
+        tracking: parseTrackingConfig({
+          ownBrand: 'Elmich',
+          categories: [
+            { slug: 'chao-chong-dinh', name: 'Chảo' },
+            { slug: 'slug-sai', name: 'Danh mục sai' },
+            { slug: 'ban-ui', name: 'Bàn ủi' },
+          ],
+        }),
+      });
+      const names = ((await routeApi(api2, 'GET', '/api/categories', new URLSearchParams()))?.body as {
+        categories: { slug: string; name: string }[];
+      }).categories;
+      assert.deepEqual(
+        names.map((c) => c.slug),
+        ['ban-ui', 'chao-chong-dinh', 'noi-com-dien'],
       );
     });
   });

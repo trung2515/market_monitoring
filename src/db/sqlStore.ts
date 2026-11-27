@@ -358,16 +358,34 @@ export class SqlStore {
     );
   }
 
-  /** Lần đầu chạy (bảng còn trống) → nạp danh sách từ config/tracking.json. Sau đó quản lý trên web. */
+  /**
+   * Nạp danh mục từ config/tracking.json vào bảng categories – CHỈ những slug chưa từng nạp
+   * (danh sách đã nạp lưu ở app_settings). Nhờ vậy:
+   *  - thêm danh mục vào file config rồi deploy → tự có trên web
+   *  - danh mục đã xoá trên web không bị nạp lại
+   */
   async seedCategories(list: { slug: string; name: string; enabled: boolean }[]): Promise<void> {
-    if (num((await this.db.first('SELECT COUNT(*) AS c FROM categories'))?.c) > 0) return;
+    const KEY = 'seeded_category_slugs';
+    const row = await this.db.first('SELECT value FROM app_settings WHERE key = ?', [KEY]);
+    // Bản cũ chưa có app_settings: coi các danh mục đang có trong bảng là đã nạp
+    const seeded = new Set<string>(
+      row ? (JSON.parse(str(row.value)) as string[]) : (await this.categories()).map((c) => c.slug),
+    );
+    const fresh = list.filter((c) => !seeded.has(c.slug));
+    if (row && fresh.length === 0) return;
     const now = new Date().toISOString();
-    await this.db.batch(
-      list.map((c, i) => ({
-        sql: 'INSERT OR IGNORE INTO categories (slug, name, enabled, sort_order, created_at) VALUES (?, ?, ?, ?, ?)',
+    fresh.forEach((c) => seeded.add(c.slug));
+    await this.db.batch([
+      ...fresh.map((c, i) => ({
+        sql: `INSERT OR IGNORE INTO categories (slug, name, enabled, sort_order, created_at)
+              VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), -1) + 1 + ? FROM categories), ?)`,
         params: [c.slug, c.name, c.enabled ? 1 : 0, i, now],
       })),
-    );
+      {
+        sql: 'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
+        params: [KEY, JSON.stringify([...seeded])],
+      },
+    ]);
   }
 
   async addCategory(slug: string, name: string): Promise<void> {

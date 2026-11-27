@@ -3,18 +3,20 @@ import type { TrackingConfig } from './tracking';
 
 /**
  * Danh sách danh mục theo dõi được QUẢN LÝ TRÊN WEB (bảng `categories`).
- * config/tracking.json chỉ dùng để nạp danh sách ban đầu khi bảng còn trống.
+ * Danh mục mới thêm vào config/tracking.json được tự nạp vào bảng ở lần chạy kế tiếp (xem SqlStore.seedCategories).
  */
 
-const seeded = new WeakSet<SqlStore>();
+/** Đã nạp danh mục từ cấu hình nào cho store nào (tránh truy vấn lại ở mỗi lần gọi). */
+const seeded = new WeakMap<SqlStore, TrackingConfig>();
 
 /** Trả về cấu hình với danh mục lấy từ database (gồm cả danh mục đã ngừng theo dõi, enabled = false). */
 export async function withStoredCategories(store: SqlStore, tracking: TrackingConfig): Promise<TrackingConfig> {
-  if (!seeded.has(store)) {
+  if (seeded.get(store) !== tracking) {
     await store.seedCategories(tracking.categories);
-    seeded.add(store);
+    seeded.set(store, tracking);
   }
-  const categories = await store.categories();
+  // Sắp xếp theo tên A→Z (tiếng Việt) – thứ tự sheet trong Excel, bộ lọc và danh sách trên web
+  const categories = (await store.categories()).sort((a, b) => a.name.localeCompare(b.name, 'vi'));
   return { ...tracking, categories: categories.map(({ slug, name, enabled }) => ({ slug, name, enabled })) };
 }
 

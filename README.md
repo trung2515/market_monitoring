@@ -67,7 +67,7 @@ Làm ngay trên web, ở mục **Danh mục theo dõi** (cuối trang). Không c
 | Khoảng giá "cùng tầm giá" (mặc định ±20%) | `config/tracking.json` → `segment.priceTolerancePercent`                                        |
 | Giờ tự lấy dữ liệu trên Cloudflare        | `wrangler.jsonc` (mục `crons`) **và** `DAILY_CRON` trong `src/worker/index.ts`. Giờ ghi theo UTC = giờ VN − 7 |
 
-Sửa xong thì deploy lại (mục 5). Mục `categories` trong `config/tracking.json` chỉ dùng để tạo danh sách ban đầu ở lần chạy đầu tiên; sau đó danh mục được quản lý trên web.
+Sửa xong thì deploy lại (mục 5). Danh mục mới thêm vào mục `categories` trong `config/tracking.json` sẽ tự xuất hiện trên web sau khi deploy; danh mục đã xoá trên web không bị thêm lại. Danh mục luôn được sắp xếp theo tên A→Z (cả sheet Excel lẫn trên web).
 
 ## 5. Cập nhật web trên Cloudflare
 
@@ -104,7 +104,7 @@ npx wrangler secret put AUTH_PASSWORD    # mật khẩu web
 npm run cf:deploy
 ```
 
-Gói miễn phí của Cloudflare chỉ cho mỗi lần chạy rất ít thời gian xử lý, nên hệ thống lấy dữ liệu theo **từng trang** (50 sản phẩm một lần). Từ 8:17 sáng, mỗi phút lấy 1 trang, khoảng 8:45 là xong. File Excel được tạo ngay trên trình duyệt.
+Gói miễn phí của Cloudflare chỉ cho mỗi lần chạy rất ít thời gian xử lý, nên hệ thống lấy dữ liệu theo **từng trang** (50 sản phẩm một lần). Từ 8:17 sáng, mỗi phút lấy 1 trang, với 22 danh mục thường xong trong khoảng 9:00–9:30. File Excel được tạo ngay trên trình duyệt.
 
 </details>
 

@@ -116,4 +116,14 @@ export const migrations: { id: number; name: string; sql: string }[] = [
       );
     `,
   },
+  {
+    id: 6,
+    name: 'app_settings',
+    sql: `
+      CREATE TABLE app_settings (
+        key   TEXT PRIMARY KEY,
+        value TEXT NOT NULL
+      );
+    `,
+  },
 ];
