@@ -22,14 +22,13 @@
     }
   ],
 
-  // Giờ UTC (= giờ VN − 7). Mỗi ngày tự lấy dữ liệu 2 lần, mỗi phút xử lý 1 trang:
-  //   "17-59 1 * * *"  = 8:17–8:59 sáng giờ VN (bắt đầu lượt sáng)   "* 2 * * *"  = 9:00–9:59 (làm tiếp)
-  //   "17-59 15 * * *" = 22:17–22:59 tối giờ VN (bắt đầu lượt tối)   "* 16 * * *" = 23:00–23:59 (làm tiếp)
-  // Hai cron "bắt đầu" phải giống START_CRONS trong src/worker/index.ts.
-  // "*/10 ..." = 10 phút một lần ngoài các khung trên: làm tiếp lượt dang dở (vd bấm "Lấy data hôm nay" rồi đóng trang).
-  // Gói free cho tối đa 5 cron mỗi tài khoản – đang dùng đủ 5.
+  // Giờ UTC (= giờ VN − 7). Mỗi ngày tự lấy dữ liệu 1 lần, mỗi phút xử lý 1 trang:
+  //   "25-59 0 * * *" = 7:25–7:59 sáng giờ VN: bắt đầu lượt cào (phải giống START_CRONS trong src/worker/index.ts)
+  //   "* 1 * * *"     = 8:00–8:59: làm tiếp nếu chưa xong (22 danh mục ≈ 60–80 trang)
+  //   "*/10 2-23 * * *" = 10 phút một lần trong ngày: làm tiếp lượt dang dở (vd bấm "Lấy data hôm nay" rồi đóng trang)
+  // Gói free cho tối đa 5 cron mỗi tài khoản.
   "triggers": {
-    "crons": ["17-59 1 * * *", "* 2 * * *", "17-59 15 * * *", "* 16 * * *", "*/10 0,3-14,17-23 * * *"]
+    "crons": ["25-59 0 * * *", "* 1 * * *", "*/10 2-23 * * *"]
   },
 
   "vars": {

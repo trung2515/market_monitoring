@@ -28,13 +28,12 @@ export interface Env {
 }
 
 /**
- * Các cron BẮT ĐẦU lượt cào tự động (giờ UTC = giờ VN − 7), mỗi ngày 2 lượt:
- *   "17-59 1 * * *"  = 8:17–8:59 sáng giờ VN
- *   "17-59 15 * * *" = 22:17–22:59 tối giờ VN
- * Phút đầu tiên bắt đầu lượt cào, các phút sau mỗi phút xử lý 1 trang.
+ * Cron BẮT ĐẦU lượt cào tự động mỗi ngày (giờ UTC = giờ VN − 7):
+ *   "25-59 0 * * *" = 7:25–7:59 sáng giờ VN. Phút đầu tiên bắt đầu lượt cào, các phút sau mỗi phút xử lý 1 trang.
+ * (Giới hạn miễn phí của Cloudflare đặt lại lúc 7:00 giờ VN, nên lượt 7:25 luôn có đủ hạn mức.)
  * Đổi giờ: sửa cả danh sách này và "triggers.crons" trong wrangler.jsonc (phải giống hệt nhau).
  */
-export const START_CRONS = new Set(['17-59 1 * * *', '17-59 15 * * *']);
+export const START_CRONS = new Set(['25-59 0 * * *']);
 /** Đã có lượt cào bắt đầu trong khoảng này thì không bắt đầu lượt mới (vd vừa bấm tay). */
 const RECENT_RUN_MS = 90 * 60_000;
 

@@ -19,7 +19,7 @@ const envSchema = z.object({
   DMX_REQUEST_TIMEOUT_MS: z.coerce.number().int().min(1000).default(20000),
   DMX_MAX_RETRIES: z.coerce.number().int().min(0).max(10).default(3),
 
-  CRAWL_CRON: z.string().default('17 8,22 * * *'),
+  CRAWL_CRON: z.string().default('25 7 * * *'),
   CRAWL_ON_SCHEDULE: booleanString.default('true'),
 
   LOG_LEVEL: z.enum(['debug', 'info', 'warn', 'error']).default('info'),

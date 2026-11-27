@@ -56,7 +56,7 @@ describe('Lấy dữ liệu nhiều lần trong ngày', () => {
     assert.equal(s2?.flashQuota, null);
   });
 
-  it('Worker tự bắt đầu lượt sáng và lượt tối, bỏ qua nếu vừa lấy trong 90 phút', async () => {
+  it('Worker tự bắt đầu lượt 7:25 mỗi sáng, không tạo lượt trùng', async () => {
     const w = ((worker as unknown as { default?: typeof worker }).default ?? worker) as typeof worker;
     const db = createFakeD1();
     const env = { DB: db, ASSETS: { fetch: async () => new Response('') } } as never;
@@ -73,22 +73,21 @@ describe('Lấy dữ liệu nhiều lần trong ngày', () => {
         `UPDATE crawl_runs SET status = 'success', started_at = '${startedAt}' WHERE status = 'running'; DELETE FROM crawl_jobs`,
       );
 
-    // Sáng 8:17 (01:17 UTC) – không có mạng tới ĐMX nên bước lấy trang sẽ lỗi, nhưng lượt vẫn được tạo
+    // 7:25 sáng (00:25 UTC) – không có mạng tới ĐMX nên bước lấy trang sẽ lỗi, nhưng lượt vẫn được tạo
     const realFetch = globalThis.fetch;
     globalThis.fetch = (async () => new Response('{}', { status: 500 })) as typeof fetch;
     try {
-      await fire('17-59 1 * * *', '2026-11-27T01:17:00Z');
+      await fire('25-59 0 * * *', '2026-11-27T00:25:00Z');
       assert.equal(runCount(), 1);
-      finishAll('2026-11-27T01:17:00.000Z');
+      finishAll('2026-11-27T00:25:00.000Z');
       // Phút sau trong cùng khung: không tạo lượt mới
-      await fire('17-59 1 * * *', '2026-11-27T01:18:00Z');
+      await fire('25-59 0 * * *', '2026-11-27T00:26:00Z');
+      await fire('* 1 * * *', '2026-11-27T01:00:00Z');
+      // Cron "làm tiếp" trong ngày không tự tạo lượt
+      await fire('*/10 2-23 * * *', '2026-11-27T15:00:00Z');
       assert.equal(runCount(), 1);
-      // Tối 22:17 (15:17 UTC): tạo lượt thứ 2
-      await fire('17-59 15 * * *', '2026-11-27T15:17:00Z');
-      assert.equal(runCount(), 2);
-      // Cron "làm tiếp" không tự tạo lượt
-      finishAll('2026-11-27T15:17:00.000Z');
-      await fire('*/10 0,3-14,17-23 * * *', '2026-11-27T17:00:00Z');
+      // Sáng hôm sau: lượt mới
+      await fire('25-59 0 * * *', '2026-11-28T00:25:00Z');
       assert.equal(runCount(), 2);
     } finally {
       globalThis.fetch = realFetch;
