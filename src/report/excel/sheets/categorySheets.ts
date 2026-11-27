@@ -2,6 +2,7 @@ import type * as ExcelJS from 'exceljs';
 import type { CategoryReport, OwnProductRow, ProductView, ReportData } from '../../analysis';
 import { normalizeBrand } from '../../../utils/text';
 import { flashWindow } from '../../market';
+import { soldNumber } from '../columns';
 import { createSheet, setColumnWidths, sheetName, writeSheetTitle, writeTable, type ColumnDef } from '../tableSheet';
 import { THEME } from '../theme';
 
@@ -20,12 +21,19 @@ export function addCategorySheets(wb: ExcelJS.Workbook, data: ReportData): void 
   }
 }
 
-const sold = (v: ProductView) => v.snapshot.soldText?.replace(/^Đã bán\s*/i, '') ?? '';
+/** Số lượng đã bán cộng dồn (số chính xác từ API; web ĐMX chỉ hiện làm tròn "25,2k"). */
+const sold = (v: ProductView | undefined) => (v ? soldNumber(v.snapshot) : null);
+/** Số bán thêm trong kỳ = đã bán ngày cuối − đã bán ngày mốc (trống nếu chưa có ngày mốc để so). */
+const soldInPeriod = (data: ReportData) => {
+  const byCode = new Map(data.soldDeltas.map((s) => [s.product.productCode, s.delta]));
+  return (v: ProductView | undefined) => (v ? (byCode.get(v.product.productCode) ?? null) : null);
+};
 const flashTime = (v: ProductView | undefined) => (v ? flashWindow(v.snapshot.flashStart, v.snapshot.flashEnd) : null);
 const promoText = (v: ProductView) => [v.snapshot.promoLabels, v.snapshot.giftText].filter(Boolean).join('; ');
 
 function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
   const own = data.ownBrand;
+  const soldDelta = soldInPeriod(data);
   const cols: ColumnDef<OwnProductRow>[] = [
     { group: own, header: `Mã ${own}`, width: 15, value: (r) => r.own.product.modelCode },
     { group: own, header: 'Tên sản phẩm', width: 48, value: (r) => r.own.product.name },
@@ -35,7 +43,8 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
     { group: own, header: '% giảm', width: 8, format: 'percent', value: (r) => r.own.snapshot.discountPercent },
     { group: own, header: 'Giá flash sale', width: 13, format: 'money', value: (r) => r.own.snapshot.flashPrice },
     { group: own, header: 'Thời gian flash', width: 14, center: true, value: (r) => flashTime(r.own) },
-    { group: own, header: 'Đã bán', width: 10, value: (r) => sold(r.own) },
+    { group: own, header: 'Đã bán', width: 10, format: 'int', value: (r) => sold(r.own) },
+    { group: own, header: 'Bán thêm trong kỳ', width: 11, format: 'int', value: (r) => soldDelta(r.own) },
     { group: own, header: 'Quà / KM khác', width: 30, value: (r) => promoText(r.own) },
   ];
 
@@ -54,6 +63,14 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
       { group, header: 'Giá bán', width: 13, format: 'money', value: (r) => m(r)?.competitor.snapshot.price },
       { group, header: 'Flash sale', width: 13, format: 'money', value: (r) => m(r)?.competitor.snapshot.flashPrice },
       { group, header: 'Thời gian flash', width: 14, center: true, value: (r) => flashTime(m(r)?.competitor) },
+      { group, header: 'Đã bán', width: 10, format: 'int', value: (r) => sold(m(r)?.competitor) },
+      {
+        group,
+        header: 'Bán thêm trong kỳ',
+        width: 11,
+        format: 'int',
+        value: (r) => soldDelta(m(r)?.competitor),
+      },
       {
         group,
         header: `Chênh so với ${own}`,
@@ -70,6 +87,7 @@ function ownColumns(data: ReportData): ColumnDef<OwnProductRow>[] {
 function allColumns(data: ReportData): ColumnDef<ProductView>[] {
   const changeByCode = new Map(data.priceChanges.map((c) => [c.product.productCode, c.diff]));
   const newCodes = new Set(data.newProducts.map((p) => p.product.productCode));
+  const soldDelta = soldInPeriod(data);
   return [
     { header: 'Hãng', width: 15, value: (r) => r.product.brand },
     { header: 'Tên sản phẩm', width: 48, value: (r) => r.product.name },
@@ -79,7 +97,8 @@ function allColumns(data: ReportData): ColumnDef<ProductView>[] {
     { header: '% giảm', width: 8, format: 'percent', value: (r) => r.snapshot.discountPercent },
     { header: 'Giá flash sale', width: 13, format: 'money', value: (r) => r.snapshot.flashPrice },
     { header: 'Thời gian flash', width: 14, center: true, value: (r) => flashTime(r) },
-    { header: 'Đã bán', width: 10, value: sold },
+    { header: 'Đã bán', width: 10, format: 'int', value: sold },
+    { header: 'Bán thêm trong kỳ', width: 11, format: 'int', value: soldDelta },
     { header: 'Quà / KM khác', width: 30, value: promoText },
     { header: 'Mã model', width: 14, value: (r) => r.product.modelCode },
     { header: 'Rating', width: 8, format: 'decimal', value: (r) => r.snapshot.rating },

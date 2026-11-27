@@ -30,11 +30,21 @@ export function detailColumns<T>(getP: Getter<T, StoredProduct>, getS: Getter<T,
   return [
     { header: 'Kích thước', width: 11, value: (r) => getP(r).sizeKey ?? '' },
     { header: 'Thông số nổi bật', width: 45, value: (r) => getP(r).specs.join('; ') },
-    { header: 'Đã bán', width: 12, value: (r) => getS(r).soldText?.replace(/^Đã bán\s*/i, '') ?? '' },
+    {
+      header: 'Đã bán',
+      width: 12,
+      format: 'int',
+      value: (r) => soldNumber(getS(r)),
+    },
     { header: 'Rating', width: 8, format: 'decimal', value: (r) => getS(r).rating },
     { header: 'Còn hàng', width: 9, value: (r) => getS(r).isAvailable },
     { header: 'Online only', width: 10, value: (r) => getP(r).isOnlineOnly },
     { header: 'Mã SP ĐMX', width: 15, value: (r) => getP(r).productCode },
     { header: 'Link', width: 12, format: 'link', linkText: () => 'Xem', value: (r) => getP(r).url },
   ];
+}
+
+/** Số đã bán cộng dồn: `totalRate` của API là số chính xác (web ĐMX chỉ hiện làm tròn "Đã bán 25,2k"). */
+export function soldNumber(s: PriceSnapshot): number | string | null {
+  return s.totalRate ?? s.soldCount ?? (s.soldText?.replace(/^Đã bán\s*/i, '') || null);
 }
