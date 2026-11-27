@@ -1,0 +1,4 @@
+# Giữ xuống dòng LF trong repo (Windows vẫn hiển thị bình thường), tránh Prettier báo lỗi do CRLF
+* text=auto eol=lf
+*.xlsx binary
+*.db binary

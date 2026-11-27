@@ -7,13 +7,20 @@
   let options = { ownBrand: '', competitorBrands: [], categories: [], brands: [] };
 
   const escapeHtml = (s) =>
-    String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+    String(s ?? '').replace(
+      /[&<>"']/g,
+      (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c],
+    );
 
   async function api(path, init) {
     const res = await fetch(path, init);
     if (!res.ok) {
       let message = `Lỗi ${res.status}`;
-      try { message = (await res.json()).error || message; } catch { /* không phải JSON */ }
+      try {
+        message = (await res.json()).error || message;
+      } catch {
+        /* không phải JSON */
+      }
       throw new Error(message);
     }
     return res;
@@ -36,20 +43,23 @@
       '<option value="">Tất cả danh mục</option>' +
       options.categories.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</option>`).join('');
     const own = options.ownBrand.toLowerCase();
-    $('#brands').innerHTML = options.brands
-      .map(
-        (b) =>
-          `<label class="${b.brand.toLowerCase() === own ? 'own' : ''}"><input type="checkbox" value="${escapeHtml(b.brand)}" /> ${escapeHtml(b.brand)} <small>(${b.productCount})</small></label>`,
-      )
-      .join('') || '<small>Chưa có dữ liệu – hãy cào dữ liệu trước.</small>';
+    $('#brands').innerHTML =
+      options.brands
+        .map(
+          (b) =>
+            `<label class="${b.brand.toLowerCase() === own ? 'own' : ''}"><input type="checkbox" value="${escapeHtml(b.brand)}" /> ${escapeHtml(b.brand)} <small>(${b.productCount})</small></label>`,
+        )
+        .join('') || '<small>Chưa có dữ liệu – hãy cào dữ liệu trước.</small>';
   }
 
   document.querySelectorAll('[data-brands]').forEach((btn) =>
     btn.addEventListener('click', () => {
       const focus = new Set([options.ownBrand, ...options.competitorBrands].map((b) => b.toLowerCase()));
-      $('#brands').querySelectorAll('input').forEach((i) => {
-        i.checked = btn.dataset.brands === 'focus' && focus.has(i.value.toLowerCase());
-      });
+      $('#brands')
+        .querySelectorAll('input')
+        .forEach((i) => {
+          i.checked = btn.dataset.brands === 'focus' && focus.has(i.value.toLowerCase());
+        });
     }),
   );
 
@@ -68,8 +78,10 @@
     let hint = '';
     if (p === 'week') {
       const day = (d.getDay() + 6) % 7; // 0 = Thứ Hai
-      const mon = new Date(d); mon.setDate(d.getDate() - day);
-      const sun = new Date(mon); sun.setDate(mon.getDate() + 6);
+      const mon = new Date(d);
+      mon.setDate(d.getDate() - day);
+      const sun = new Date(mon);
+      sun.setDate(mon.getDate() + 6);
       hint = `→ Tuần ${mon.toLocaleDateString('vi-VN')} – ${sun.toLocaleDateString('vi-VN')}`;
     } else if (p === 'month') {
       hint = `→ Tháng ${d.getMonth() + 1}/${d.getFullYear()}`;
@@ -171,16 +183,17 @@
     const data = await (await api(`/api/products?${params}`)).json();
     $('#preview-date').textContent = data.date ? `(ngày ${data.date}, ${data.items.length} sản phẩm)` : '';
     const own = options.ownBrand.toLowerCase();
-    $('#preview').innerHTML = data.items
-      .map(
-        (p) => `<tr class="${p.brand.toLowerCase() === own ? 'own' : ''}">
+    $('#preview').innerHTML =
+      data.items
+        .map(
+          (p) => `<tr class="${p.brand.toLowerCase() === own ? 'own' : ''}">
           <td>${escapeHtml(p.categoryName)}</td><td>${escapeHtml(p.brand)}</td><td>${escapeHtml(p.modelCode)}</td>
           <td><a href="${escapeHtml(p.url)}" target="_blank" rel="noopener">${escapeHtml(p.name)}</a></td>
           <td class="num">${fmtMoney(p.listPrice)}</td><td class="num"><b>${fmtMoney(p.price)}</b></td>
           <td class="num">${p.discountPercent != null ? p.discountPercent + '%' : ''}</td>
           <td class="num">${fmtMoney(p.flashPrice)}</td><td>${escapeHtml((p.soldText || '').replace(/^Đã bán\s*/i, ''))}</td></tr>`,
-      )
-      .join('') || '<tr><td colspan="9">Chưa có dữ liệu</td></tr>';
+        )
+        .join('') || '<tr><td colspan="9">Chưa có dữ liệu</td></tr>';
   }
   $('#preview-category').addEventListener('change', loadPreview);
   $('#search').addEventListener('input', () => {

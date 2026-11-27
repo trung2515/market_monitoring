@@ -9,7 +9,14 @@ const dateParam = z.string().refine(isDateString, 'Ngày phải có dạng YYYY-
 const csv = z
   .string()
   .optional()
-  .transform((v) => (v ? v.split(',').map((s) => s.trim()).filter(Boolean) : []));
+  .transform((v) =>
+    v
+      ? v
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [],
+  );
 
 const exportQuery = z.object({
   period: z.enum(['week', 'month', 'custom']).default('week'),
@@ -90,7 +97,10 @@ export function apiRouter(ctx: AppContext): Router {
       filter: toFilter(q),
     });
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`);
+    res.setHeader(
+      'Content-Disposition',
+      `attachment; filename="${fileName}"; filename*=UTF-8''${encodeURIComponent(fileName)}`,
+    );
     await workbook.xlsx.write(res);
     res.end();
   });

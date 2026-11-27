@@ -26,7 +26,13 @@ async function main(): Promise<void> {
   if (!['week', 'month', 'custom'].includes(values.period ?? '')) {
     throw new Error('--period phải là week | month | custom');
   }
-  const list = (v?: string) => (v ? v.split(',').map((s) => s.trim()).filter(Boolean) : []);
+  const list = (v?: string) =>
+    v
+      ? v
+          .split(',')
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [];
 
   const ctx = createContext();
   try {

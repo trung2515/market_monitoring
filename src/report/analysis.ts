@@ -227,7 +227,9 @@ export function analyze(input: AnalysisInput): ReportData {
       if (product && base) goneProducts.push({ product, lastSnapshot: list.at(-1) ?? base });
     }
   }
-  goneProducts.sort((a, b) => compareView({ product: a.product, snapshot: a.lastSnapshot }, { product: b.product, snapshot: b.lastSnapshot }));
+  goneProducts.sort((a, b) =>
+    compareView({ product: a.product, snapshot: a.lastSnapshot }, { product: b.product, snapshot: b.lastSnapshot }),
+  );
 
   // ---- Lượt bán tăng thêm ----
   const soldDeltas: SoldDelta[] = [];
@@ -326,8 +328,12 @@ export function buildCategoryReports(
     .map(([slug, views]) => {
       const sorted = [...views].sort(byPrice);
       const isOwn = (v: ProductView) => normalizeBrand(v.product.brand) === ownBrand;
-      const rivals = sorted.filter((v) => !isOwn(v) && (!config.onlyListedCompetitors || roleOf(v.product.brand) === 'competitor'));
-      const ownRows = sorted.filter(isOwn).map((own) => ({ own, competitors: findCompetitors(own, rivals, byModel, config) }));
+      const rivals = sorted.filter(
+        (v) => !isOwn(v) && (!config.onlyListedCompetitors || roleOf(v.product.brand) === 'competitor'),
+      );
+      const ownRows = sorted
+        .filter(isOwn)
+        .map((own) => ({ own, competitors: findCompetitors(own, rivals, byModel, config) }));
       return { slug, name: views[0]?.product.categoryName ?? slug, ownRows, products: sorted };
     })
     .sort((a, b) => order(a.slug) - order(b.slug) || a.name.localeCompare(b.name, 'vi'));
@@ -367,15 +373,17 @@ export function findCompetitors(
         Math.abs(r.snapshot.price - ownPrice) <= tolerance,
     )
     .map((r) => makeMatch(own, r, 'auto'))
-    .sort(
-      (a, b) =>
-        Number(b.sameSize) - Number(a.sameSize) || Math.abs(a.priceDiff ?? 0) - Math.abs(b.priceDiff ?? 0),
-    );
+    .sort((a, b) => Number(b.sameSize) - Number(a.sameSize) || Math.abs(a.priceDiff ?? 0) - Math.abs(b.priceDiff ?? 0));
 
   return [...result, ...auto].slice(0, config.maxCompetitorsPerProduct);
 }
 
-function makeMatch(own: ProductView, competitor: ProductView, source: 'auto' | 'manual', note?: string): CompetitorMatch {
+function makeMatch(
+  own: ProductView,
+  competitor: ProductView,
+  source: 'auto' | 'manual',
+  note?: string,
+): CompetitorMatch {
   const op = own.snapshot.price;
   const cp = competitor.snapshot.price;
   const diff = op != null && cp != null ? cp - op : null;

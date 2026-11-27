@@ -24,7 +24,8 @@
           </fieldset>
 
           <div class="row" data-show="week month">
-            <label>Chọn 1 ngày bất kỳ trong kỳ
+            <label
+              >Chọn 1 ngày bất kỳ trong kỳ
               <input type="date" name="date" />
             </label>
             <small id="period-hint" class="hint"></small>
@@ -61,7 +62,15 @@
         <p id="crawl-msg" class="msg"></p>
         <h3>Lần cào gần đây</h3>
         <table class="runs">
-          <thead><tr><th>Ngày</th><th>Kiểu</th><th>Trạng thái</th><th>Số SP</th><th>Ghi chú</th></tr></thead>
+          <thead>
+            <tr>
+              <th>Ngày</th>
+              <th>Kiểu</th>
+              <th>Trạng thái</th>
+              <th>Số SP</th>
+              <th>Ghi chú</th>
+            </tr>
+          </thead>
           <tbody id="runs"></tbody>
         </table>
       </section>
@@ -70,7 +79,9 @@
         <div class="preview-head">
           <h2>Xem nhanh bảng giá mới nhất <small id="preview-date"></small></h2>
           <div class="preview-filters">
-            <select id="preview-category"><option value="">Tất cả danh mục</option></select>
+            <select id="preview-category">
+              <option value="">Tất cả danh mục</option>
+            </select>
             <input id="search" type="search" placeholder="Tìm theo tên / mã model…" />
           </div>
         </div>
@@ -78,9 +89,15 @@
           <table class="preview">
             <thead>
               <tr>
-                <th>Danh mục</th><th>Hãng</th><th>Mã model</th><th>Tên sản phẩm</th>
-                <th class="num">Giá gốc</th><th class="num">Giá bán</th><th class="num">% giảm</th>
-                <th class="num">Flash sale</th><th>Đã bán</th>
+                <th>Danh mục</th>
+                <th>Hãng</th>
+                <th>Mã model</th>
+                <th>Tên sản phẩm</th>
+                <th class="num">Giá gốc</th>
+                <th class="num">Giá bán</th>
+                <th class="num">% giảm</th>
+                <th class="num">Flash sale</th>
+                <th>Đã bán</th>
               </tr>
             </thead>
             <tbody id="preview"></tbody>

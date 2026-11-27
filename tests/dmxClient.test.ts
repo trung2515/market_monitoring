@@ -67,7 +67,10 @@ describe('normalizeDmxProduct', () => {
     assert.equal(product.modelCode, 'EDA0904GO30');
     assert.equal(product.brand, 'Elmich');
     assert.equal(product.sizeKey, '30cm');
-    assert.equal(product.url, 'https://www.dienmayxanh.com/chao-chong-dinh/chao-nhom-sau-chong-dinh-day-tu-30-cm-elmich-eda0904go30');
+    assert.equal(
+      product.url,
+      'https://www.dienmayxanh.com/chao-chong-dinh/chao-nhom-sau-chong-dinh-day-tu-30-cm-elmich-eda0904go30',
+    );
     assert.equal(snapshot.price, 320000);
     assert.equal(snapshot.listPrice, 639000);
     assert.equal(snapshot.flashPrice, 230000);

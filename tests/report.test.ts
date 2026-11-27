@@ -79,7 +79,12 @@ function setup(segment: Record<string, unknown> = {}) {
   save('2026-11-26', sunNew, 310000, 20);
   save('2026-11-26', tefal, 320000, 540);
 
-  const service = new ReportService({ products, snapshots, tracking: makeTracking(segment), timeZone: 'Asia/Ho_Chi_Minh' });
+  const service = new ReportService({
+    products,
+    snapshots,
+    tracking: makeTracking(segment),
+    timeZone: 'Asia/Ho_Chi_Minh',
+  });
   return { db, service };
 }
 
@@ -101,8 +106,14 @@ describe('ReportService', () => {
     assert.equal(changes.E1?.diff, -10000);
     assert.equal(changes.T1, undefined);
 
-    assert.deepEqual(data.newProducts.map((p) => p.product.productCode), ['S3']);
-    assert.deepEqual(data.goneProducts.map((p) => p.product.productCode), ['S2']);
+    assert.deepEqual(
+      data.newProducts.map((p) => p.product.productCode),
+      ['S3'],
+    );
+    assert.deepEqual(
+      data.goneProducts.map((p) => p.product.productCode),
+      ['S2'],
+    );
 
     const sold = Object.fromEntries(data.soldDeltas.map((s) => [s.product.productCode, s.delta]));
     assert.equal(sold.S1, 200);
@@ -114,7 +125,10 @@ describe('ReportService', () => {
     const chao = data.categories[0];
     assert.equal(chao?.name, 'Chảo');
     assert.equal(chao?.products.length, 4);
-    assert.deepEqual(chao?.products.map((p) => p.product.productCode), ['S1', 'E1', 'S3', 'T1']); // theo giá
+    assert.deepEqual(
+      chao?.products.map((p) => p.product.productCode),
+      ['S1', 'E1', 'S3', 'T1'],
+    ); // theo giá
     assert.equal(chao?.ownRows.length, 1);
     assert.deepEqual(
       chao?.ownRows[0]?.competitors.map((c) => c.competitor.product.productCode),
@@ -135,13 +149,19 @@ describe('ReportService', () => {
   it('không lấy đối thủ ngoài tầm giá', () => {
     const { service } = setup({ priceTolerancePercent: 5 });
     const data = service.buildData({ type: 'week', date: '2026-11-26' });
-    assert.deepEqual(data.categories[0]?.ownRows[0]?.competitors.map((c) => c.competitor.product.productCode), []);
+    assert.deepEqual(
+      data.categories[0]?.ownRows[0]?.competitors.map((c) => c.competitor.product.productCode),
+      [],
+    );
   });
 
   it('lọc theo thương hiệu', () => {
     const { service } = setup();
     const data = service.buildData({ type: 'week', date: '2026-11-26', filter: { brands: ['tefal'] } });
-    assert.deepEqual(data.current.map((c) => c.product.brand), ['Tefal']);
+    assert.deepEqual(
+      data.current.map((c) => c.product.brand),
+      ['Tefal'],
+    );
   });
 
   it('kỳ không có dữ liệu', () => {

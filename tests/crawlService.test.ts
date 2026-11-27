@@ -30,7 +30,15 @@ describe('CrawlService', () => {
     const runs = new CrawlRunRepository(db);
     const service = new CrawlService({
       db,
-      client: new DmxClient({ provinceId: 1027, pageSize: 50, delayMs: 0, timeoutMs: 5000, maxRetries: 0, logger: silentLogger, fetchImpl }),
+      client: new DmxClient({
+        provinceId: 1027,
+        pageSize: 50,
+        delayMs: 0,
+        timeoutMs: 5000,
+        maxRetries: 0,
+        logger: silentLogger,
+        fetchImpl,
+      }),
       products,
       snapshots,
       runs,

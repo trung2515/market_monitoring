@@ -25,7 +25,10 @@ const SIZE_TOKEN = /^\d+([.,]\d+)?(cm|mm|ml|l|lít|lit|kg|g|w)$/i;
  * Nếu tên không có mã (vd "Nồi lẩu ... Elmich Daily Milan") và biết hãng → lấy tên dòng sau tên hãng: "DAILY MILAN".
  */
 export function extractModelCode(name: string, brand?: string): string {
-  const tokens = name.trim().split(/\s+/).map((t) => t.replace(/[(),]/g, ''));
+  const tokens = name
+    .trim()
+    .split(/\s+/)
+    .map((t) => t.replace(/[(),]/g, ''));
   for (let i = tokens.length - 1; i >= 0; i--) {
     const token = tokens[i] ?? '';
     if (token.length < 4 || SIZE_TOKEN.test(token)) continue;

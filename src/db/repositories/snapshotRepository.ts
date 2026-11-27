@@ -68,9 +68,7 @@ export class SnapshotRepository {
 
   /** Ngày có dữ liệu gần nhất, nhỏ hơn hẳn `date`. */
   latestDateBefore(date: string): string | null {
-    const row = this.db
-      .prepare('SELECT MAX(crawl_date) AS d FROM price_snapshots WHERE crawl_date < ?')
-      .get(date);
+    const row = this.db.prepare('SELECT MAX(crawl_date) AS d FROM price_snapshots WHERE crawl_date < ?').get(date);
     return strOrNull(row?.d);
   }
 
