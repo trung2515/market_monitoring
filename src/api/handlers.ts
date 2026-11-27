@@ -1,6 +1,6 @@
 import { z } from 'zod';
 import { parseCategorySlug, withStoredCategories } from '../config/categories';
-import type { TrackingConfig } from '../config/tracking';
+import { canonicalBrand, expandBrands, type TrackingConfig } from '../config/tracking';
 import type { CrawlEngine } from '../crawler/crawlEngine';
 import type { DmxClient } from '../crawler/dmx/client';
 import type { ProductFilter } from '../db/rowMappers';
@@ -101,7 +101,16 @@ export function createApi({ store, engine, client, tracking: baseTracking }: Api
 
     /** Dữ liệu cho bộ lọc + cấu hình báo cáo (trình duyệt cần để tự tạo file Excel). */
     async options() {
-      const [config, brands] = await Promise.all([tracking(), store.brands()]);
+      const [config, rawBrands] = await Promise.all([tracking(), store.brands()]);
+      // Gộp số SP của các tên hãng được khai báo trong brandAliases
+      const merged = new Map<string, number>();
+      for (const b of rawBrands) {
+        const name = canonicalBrand(config, b.brand);
+        merged.set(name, (merged.get(name) ?? 0) + b.productCount);
+      }
+      const brands = [...merged]
+        .map(([brand, productCount]) => ({ brand, productCount }))
+        .sort((a, b) => b.productCount - a.productCount || a.brand.localeCompare(b.brand));
       return {
         ownBrand: config.ownBrand,
         competitorBrands: config.competitorBrands,
@@ -167,7 +176,13 @@ export function createApi({ store, engine, client, tracking: baseTracking }: Api
     /** Bảng giá mới nhất (bảng xem nhanh trên web). */
     async products(query: URLSearchParams) {
       const q = parse(productsQuery, query);
-      return store.latestPrices({ filter: toFilter(q), keyword: q.q?.trim() || undefined, limit: q.limit });
+      const filter = toFilter(q);
+      const result = await store.latestPrices({
+        filter: { ...filter, brands: expandBrands(baseTracking, filter.brands ?? []) },
+        keyword: q.q?.trim() || undefined,
+        limit: q.limit,
+      });
+      return { ...result, items: result.items.map((p) => ({ ...p, brand: canonicalBrand(baseTracking, p.brand) })) };
     },
 
     // ----- Dữ liệu thô cho báo cáo (trình duyệt tự phân tích & tạo Excel) -----

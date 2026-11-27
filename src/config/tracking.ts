@@ -8,6 +8,11 @@ const trackingSchema = z.object({
   ownBrand: z.string().min(1),
   /** Đối thủ cần tập trung. Để rỗng = coi mọi hãng khác là đối thủ. */
   competitorBrands: z.array(z.string().min(1)).default([]),
+  /**
+   * Gộp tên hãng ĐMX ghi không thống nhất: { "tên trong dữ liệu": "tên dùng trong báo cáo" }.
+   * Vd { "LocknLock": "Lock&Lock" }. Không phân biệt hoa thường. Dữ liệu gốc không bị sửa, chỉ gộp khi hiển thị/báo cáo.
+   */
+  brandAliases: z.record(z.string().min(1)).default({}),
   categories: z
     .array(
       z.object({
@@ -55,4 +60,22 @@ export function parseTrackingConfig(raw: unknown): TrackingConfig {
     throw new Error(`config tracking không hợp lệ:\n${issues}`);
   }
   return parsed.data;
+}
+
+/** Tên hãng dùng trong báo cáo (đã gộp theo brandAliases). */
+export function canonicalBrand(tracking: Pick<TrackingConfig, 'brandAliases'>, brand: string): string {
+  const key = brand.trim().toLowerCase();
+  for (const [from, to] of Object.entries(tracking.brandAliases ?? {})) {
+    if (from.trim().toLowerCase() === key) return to;
+  }
+  return brand;
+}
+
+/** Mở rộng danh sách hãng để lọc dữ liệu gốc: "Lock&Lock" → ["Lock&Lock", "LocknLock", "Lock Lock"]. */
+export function expandBrands(tracking: Pick<TrackingConfig, 'brandAliases'>, brands: string[]): string[] {
+  const wanted = new Set(brands.map((b) => canonicalBrand(tracking, b).toLowerCase()));
+  const extra = Object.entries(tracking.brandAliases ?? {})
+    .filter(([, to]) => wanted.has(to.toLowerCase()))
+    .map(([from]) => from);
+  return [...new Set([...brands, ...extra])];
 }

@@ -12,6 +12,10 @@
     "Kalpen",
     "Kalite"
   ],
+  "brandAliases": {
+    "LocknLock": "Lock&Lock",
+    "Lock Lock": "Lock&Lock"
+  },
   "categories": [
     {
       "slug": "ban-ui",

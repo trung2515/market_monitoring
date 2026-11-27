@@ -103,6 +103,38 @@ async function setup(segment: Record<string, unknown> = {}) {
 }
 
 describe('ReportService', () => {
+  it('gộp tên hãng theo brandAliases (Lock&Lock / LocknLock / Lock Lock)', async () => {
+    const store = new SqlStore(new NodeSqliteDriver(openDatabase(':memory:')));
+    const tracking = parseTrackingConfig({
+      ownBrand: 'Elmich',
+      competitorBrands: ['Lock&Lock'],
+      brandAliases: { LocknLock: 'Lock&Lock', 'lock lock': 'Lock&Lock' },
+      categories: [{ slug: 'chao-chong-dinh', name: 'Chảo' }],
+    });
+    const items = [
+      product('L1', 'Lock&Lock', 'Chảo Lock&Lock A1'),
+      product('L2', 'LocknLock', 'Chảo LocknLock A2'),
+      product('L3', 'Lock Lock', 'Chảo Lock&Lock A3'),
+      product('E1', 'Elmich', 'Chảo Elmich EL-1'),
+    ];
+    for (const p of items) {
+      const { crawlDate: _d, ...snapshot } = snap('2026-11-26', p.productCode, 300000, 10);
+      await store.saveCrawledPage('2026-11-26', [{ product: p, snapshot }]);
+    }
+    const all = await buildReportData(store, tracking, { type: 'week', date: '2026-11-26' }, '2026-11-27');
+    const lock = all.market.shares.find((r) => r.brand === 'Lock&Lock');
+    assert.equal(lock?.skuCount, 3);
+    assert.equal(all.market.shares.filter((r) => /lock/i.test(r.brand)).length, 1);
+    // Lọc "Lock&Lock" lấy được cả 3 sản phẩm
+    const only = await buildReportData(
+      store,
+      tracking,
+      { type: 'week', date: '2026-11-26', filter: { brands: ['Lock&Lock'] } },
+      '2026-11-27',
+    );
+    assert.deepEqual(only.current.map((v) => v.product.productCode).sort(), ['L1', 'L2', 'L3']);
+  });
+
   it('không chọn danh mục → bỏ qua danh mục đã ngừng theo dõi', async () => {
     const db = openDatabase(':memory:');
     const store = new SqlStore(new NodeSqliteDriver(db));

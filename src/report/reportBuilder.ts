@@ -1,4 +1,4 @@
-import type { TrackingConfig } from '../config/tracking';
+import { canonicalBrand, expandBrands, type TrackingConfig } from '../config/tracking';
 import type { ProductFilter } from '../db/rowMappers';
 import type { PriceSnapshot, StoredProduct } from '../domain/types';
 import { analyze, type ReportData } from './analysis';
@@ -35,6 +35,10 @@ export async function buildReportData(
   today: string,
 ): Promise<ReportData> {
   const period = resolvePeriod(req, today);
+  // Gộp tên hãng: lọc theo cả các tên gốc, rồi đổi tên gốc → tên báo cáo
+  if (req.filter?.brands?.length) {
+    req = { ...req, filter: { ...req.filter, brands: expandBrands(tracking, req.filter.brands) } };
+  }
   // Không chọn danh mục nào = mọi danh mục ĐANG THEO DÕI (danh mục đã ngừng không lên báo cáo)
   if (!req.filter?.categories?.length) {
     const enabled = tracking.categories.filter((c) => c.enabled).map((c) => c.slug);
@@ -44,7 +48,7 @@ export async function buildReportData(
     source.crawlDates(period.from, period.to),
     source.latestDateBefore(period.from),
     source.firstCrawlDate(),
-    source.products(req.filter),
+    source.products(req.filter).then((list) => list.map((p) => ({ ...p, brand: canonicalBrand(tracking, p.brand) }))),
   ]);
   const endDate = datesInPeriod.at(-1) ?? null;
   const snapshots = endDate ? await source.snapshotsBetween(baselineDate ?? period.from, endDate, req.filter) : [];
