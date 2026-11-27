@@ -314,7 +314,7 @@
               <span class="cat-meta">${escapeHtml(meta.join(' · '))}</span>
             </span>
             <span class="cat-actions">
-              <button type="button" class="link-btn" data-action="${c.enabled ? 'disable' : 'enable'}">${c.enabled ? 'Ngừng theo dõi' : 'Theo dõi lại'}</button>
+              <button type="button" class="link-btn ${c.enabled ? 'cat-stop' : 'cat-resume'}" data-action="${c.enabled ? 'disable' : 'enable'}">${c.enabled ? 'Ngừng theo dõi' : 'Theo dõi lại'}</button>
               ${c.productCount ? '' : '<button type="button" class="link-btn danger" data-action="delete">Xoá</button>'}
             </span>
           </li>`;

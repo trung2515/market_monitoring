@@ -402,6 +402,13 @@ select {
   gap: 10px;
   flex: none;
 }
+.cat-list .link-btn.cat-stop {
+  color: var(--amber);
+}
+.cat-list .link-btn.cat-resume {
+  color: var(--forest);
+  font-weight: 600;
+}
 .cat-list .link-btn.danger {
   color: var(--danger);
 }
