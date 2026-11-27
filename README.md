@@ -56,7 +56,7 @@ Nút **Lấy data hôm nay** chỉ cần bấm khi muốn có giá mới nhất 
 Làm ngay trên web, ở mục **Danh mục theo dõi** (cuối trang). Không cần sửa code, không cần deploy.
 
 - **Thêm:** mở danh mục trên dienmayxanh.com, copy link (ví dụ `https://www.dienmayxanh.com/noi-com-dien`), dán vào ô rồi bấm **Thêm danh mục**. Hệ thống tự kiểm tra link và lấy tên danh mục. Dữ liệu bắt đầu có từ lần lấy kế tiếp.
-- **Ngừng theo dõi:** khi không kinh doanh hoặc không cần theo dõi nữa. Hệ thống thôi lấy dữ liệu mới nhưng **vẫn giữ lịch sử**, vẫn xuất Excel được các kỳ cũ. Bấm **Theo dõi lại** lúc nào cũng được.
+- **Ngừng theo dõi:** khi không kinh doanh hoặc không cần theo dõi nữa. Hệ thống thôi lấy dữ liệu mới, danh mục **không còn hiện ở bộ lọc và không lên báo cáo**, nhưng dữ liệu cũ vẫn được giữ. Bấm **Theo dõi lại** lúc nào cũng được.
 - **Xoá:** chỉ dùng cho danh mục chưa có dữ liệu (ví dụ thêm nhầm).
 
 ## 4. Đổi đối thủ, giờ chạy
@@ -67,7 +67,7 @@ Làm ngay trên web, ở mục **Danh mục theo dõi** (cuối trang). Không c
 | Khoảng giá "cùng tầm giá" (mặc định ±20%) | `config/tracking.json` → `segment.priceTolerancePercent`                                        |
 | Giờ tự lấy dữ liệu trên Cloudflare        | `wrangler.jsonc` (mục `crons`) **và** `START_CRONS` trong `src/worker/index.ts`. Giờ ghi theo UTC = giờ VN − 7 |
 
-Sửa xong thì deploy lại (mục 5). Danh mục mới thêm vào mục `categories` trong `config/tracking.json` sẽ tự xuất hiện trên web sau khi deploy; danh mục đã xoá trên web không bị thêm lại. Danh mục luôn được sắp xếp theo tên A→Z (cả sheet Excel lẫn trên web).
+Sửa xong thì deploy lại (mục 5). Mục `categories` trong `config/tracking.json` được đồng bộ lên web khi deploy: thêm danh mục vào file → tự theo dõi; bỏ danh mục khỏi file → tự **ngừng theo dõi** (dữ liệu cũ vẫn giữ). Danh mục thêm/xoá trên web không bị ảnh hưởng. Danh mục luôn được sắp xếp theo tên A→Z (cả sheet Excel lẫn trên web).
 
 ## 5. Cập nhật web trên Cloudflare
 

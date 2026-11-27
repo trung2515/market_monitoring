@@ -367,31 +367,37 @@ export class SqlStore {
   }
 
   /**
-   * Nạp danh mục từ config/tracking.json vào bảng categories – CHỈ những slug chưa từng nạp
-   * (danh sách đã nạp lưu ở app_settings). Nhờ vậy:
-   *  - thêm danh mục vào file config rồi deploy → tự có trên web
-   *  - danh mục đã xoá trên web không bị nạp lại
+   * Đồng bộ danh mục từ config/tracking.json vào bảng categories (danh sách slug đã đồng bộ lưu ở app_settings):
+   *  - slug MỚI có trong config → thêm vào (và bật theo dõi)
+   *  - slug TRƯỚC ĐÂY có trong config nhưng nay bị bỏ ra → tự "ngừng theo dõi" (giữ dữ liệu cũ)
+   *  - danh mục thêm / xoá / bật tắt trên web mà không liên quan tới thay đổi của config → không đụng tới
    */
   async seedCategories(list: { slug: string; name: string; enabled: boolean }[]): Promise<void> {
     const KEY = 'seeded_category_slugs';
     const row = await this.db.first('SELECT value FROM app_settings WHERE key = ?', [KEY]);
-    // Bản cũ chưa có app_settings: coi các danh mục đang có trong bảng là đã nạp
+    // Bản cũ chưa có app_settings: coi các danh mục đang có trong bảng là đã đồng bộ
     const seeded = new Set<string>(
       row ? (JSON.parse(str(row.value)) as string[]) : (await this.categories()).map((c) => c.slug),
     );
+    const inConfig = new Set(list.map((c) => c.slug));
     const fresh = list.filter((c) => !seeded.has(c.slug));
-    if (row && fresh.length === 0) return;
+    // Chỉ coi là "bị bỏ khỏi config" khi đã có danh sách đồng bộ từ trước
+    const removed = row ? [...seeded].filter((slug) => !inConfig.has(slug)) : [];
+    if (row && fresh.length === 0 && removed.length === 0) return;
+
     const now = new Date().toISOString();
-    fresh.forEach((c) => seeded.add(c.slug));
+    const next = new Set([...[...seeded].filter((slug) => !removed.includes(slug)), ...fresh.map((c) => c.slug)]);
     await this.db.batch([
       ...fresh.map((c, i) => ({
-        sql: `INSERT OR IGNORE INTO categories (slug, name, enabled, sort_order, created_at)
-              VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), -1) + 1 + ? FROM categories), ?)`,
+        sql: `INSERT INTO categories (slug, name, enabled, sort_order, created_at)
+              VALUES (?, ?, ?, (SELECT COALESCE(MAX(sort_order), -1) + 1 + ? FROM categories), ?)
+              ON CONFLICT(slug) DO UPDATE SET enabled = excluded.enabled`,
         params: [c.slug, c.name, c.enabled ? 1 : 0, i, now],
       })),
+      ...removed.map((slug) => ({ sql: 'UPDATE categories SET enabled = 0 WHERE slug = ?', params: [slug] })),
       {
         sql: 'INSERT INTO app_settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value',
-        params: [KEY, JSON.stringify([...seeded])],
+        params: [KEY, JSON.stringify([...next])],
       },
     ]);
   }

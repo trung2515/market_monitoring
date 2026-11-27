@@ -99,9 +99,9 @@
       ? { categories: checkedValues($('#categories')), brands: checkedValues($('#brands')) }
       : savedFilters();
 
-    $('#categories').innerHTML = o.categories
-      .map((c) => chip(c.slug, c.name, c.enabled === false ? ' <small>(ngừng)</small>' : '', c.enabled === false ? 'off' : ''))
-      .join('');
+    // Chỉ hiện danh mục đang theo dõi (danh mục đã ngừng xem ở mục "Danh mục theo dõi")
+    const activeCategories = o.categories.filter((c) => c.enabled !== false);
+    $('#categories').innerHTML = activeCategories.map((c) => chip(c.slug, c.name)).join('');
     $('#brands').innerHTML =
       o.brands
         .map((b) =>
@@ -116,8 +116,8 @@
 
     $('#preview-category').innerHTML =
       '<option value="">Tất cả danh mục</option>' +
-      o.categories.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</option>`).join('');
-    window.Dashboard?.setCategories(o.categories);
+      activeCategories.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</option>`).join('');
+    window.Dashboard?.setCategories(activeCategories);
     $('#focus-brands-btn').textContent = `${o.ownBrand} + đối thủ chính`;
     $('#only-own-label').textContent = `Chỉ ${o.ownBrand}`;
     $('#brand-sub').textContent = `Công ty: ${o.ownBrand}`;
@@ -299,9 +299,9 @@
   // ---------- Danh mục theo dõi ----------
   async function loadCategories() {
     const { categories } = await (await api('/api/categories')).json();
-    $('#cat-list').innerHTML =
-      categories
-        .map((c) => {
+    const active = categories.filter((c) => c.enabled);
+    const stopped = categories.filter((c) => !c.enabled);
+    const item = (c) => {
           const meta = [
             c.slug,
             c.productCount ? `${c.productCount.toLocaleString('vi-VN')} SP` : 'chưa có dữ liệu',
@@ -318,8 +318,12 @@
               ${c.productCount ? '' : '<button type="button" class="link-btn danger" data-action="delete">Xoá</button>'}
             </span>
           </li>`;
-        })
-        .join('') || '<li><span class="note">Chưa có danh mục nào.</span></li>';
+    };
+    $('#cat-list').innerHTML =
+      (active.map(item).join('') || '<li><span class="note">Chưa theo dõi danh mục nào.</span></li>') +
+      (stopped.length
+        ? `<li class="cat-group">Đã ngừng theo dõi (${stopped.length})</li>` + stopped.map(item).join('')
+        : '');
   }
 
   const refreshAfterCategoryChange = () => Promise.all([loadCategories(), loadOptions()]).catch(() => {});

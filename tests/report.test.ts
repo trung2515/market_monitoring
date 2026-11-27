@@ -103,6 +103,39 @@ async function setup(segment: Record<string, unknown> = {}) {
 }
 
 describe('ReportService', () => {
+  it('không chọn danh mục → bỏ qua danh mục đã ngừng theo dõi', async () => {
+    const db = openDatabase(':memory:');
+    const store = new SqlStore(new NodeSqliteDriver(db));
+    const tracking = parseTrackingConfig({
+      ownBrand: 'Elmich',
+      categories: [
+        { slug: 'chao-chong-dinh', name: 'Chảo' },
+        { slug: 'thot', name: 'Thớt', enabled: false },
+      ],
+    });
+    const p1 = product('E1', 'Elmich', 'Chảo Elmich EL-1');
+    const p2 = { ...product('T1', 'Sunhouse', 'Thớt Sunhouse T-1'), categorySlug: 'thot', categoryName: 'Thớt' };
+    for (const p of [p1, p2]) {
+      const { crawlDate: _d, ...snapshot } = snap('2026-11-26', p.productCode, 100000, 1);
+      await store.saveCrawledPage('2026-11-26', [{ product: p, snapshot: { ...snapshot, categorySlug: p.categorySlug } }]);
+    }
+    const data = await buildReportData(store, tracking, { type: 'week', date: '2026-11-26' }, '2026-11-27');
+    assert.deepEqual(
+      data.categories.map((c) => c.name),
+      ['Chảo'],
+    );
+    const picked = await buildReportData(
+      store,
+      tracking,
+      { type: 'week', date: '2026-11-26', filter: { categories: ['thot'] } },
+      '2026-11-27',
+    );
+    assert.deepEqual(
+      picked.categories.map((c) => c.name),
+      ['Thớt'],
+    );
+  });
+
   it('phân tích đúng biến động trong tuần', async () => {
     const { service } = await setup();
     const data = await service.buildData({ type: 'week', date: '2026-11-26' });

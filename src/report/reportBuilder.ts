@@ -35,6 +35,11 @@ export async function buildReportData(
   today: string,
 ): Promise<ReportData> {
   const period = resolvePeriod(req, today);
+  // Không chọn danh mục nào = mọi danh mục ĐANG THEO DÕI (danh mục đã ngừng không lên báo cáo)
+  if (!req.filter?.categories?.length) {
+    const enabled = tracking.categories.filter((c) => c.enabled).map((c) => c.slug);
+    req = { ...req, filter: { ...req.filter, categories: enabled } };
+  }
   const [datesInPeriod, baselineDate, firstEverCrawlDate, products] = await Promise.all([
     source.crawlDates(period.from, period.to),
     source.latestDateBefore(period.from),
