@@ -107,7 +107,7 @@ export function addPromotionSheet(wb: ExcelJS.Workbook, data: ReportData): void 
     name: 'Khuyến mãi',
     title: `Tất cả chương trình khuyến mãi đang chạy (dữ liệu ngày ${data.endDate ?? '—'})`,
     subtitle:
-      'Gồm: giảm giá so với giá gốc, flash sale (giờ vàng), quà tặng, nhãn khuyến mãi, trả góp và ưu đãi thanh toán. ' +
+      'Gồm: giảm giá so với giá niêm yết, flash sale (giờ vàng), quà tặng, nhãn khuyến mãi, trả góp và ưu đãi thanh toán. ' +
       '"Sắp hết" = chương trình giá sắp kết thúc (số ngày chỉnh ở report.promoEndingSoonDays). Sắp theo mức giảm sâu nhất trong từng danh mục.',
     rows: data.market.promotions,
     highlight: (r) => own(r.product.brand),
@@ -119,7 +119,7 @@ export function addPromotionSheet(wb: ExcelJS.Workbook, data: ReportData): void 
       { group: 'Sản phẩm', header: 'Tên sản phẩm', width: 45, value: (r) => r.product.name },
       {
         group: 'Giảm giá',
-        header: 'Giá gốc (niêm yết)',
+        header: 'Giá niêm yết',
         width: 13,
         format: 'money',
         value: (r) => r.snapshot.listPrice,

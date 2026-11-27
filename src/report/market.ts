@@ -190,7 +190,7 @@ export function analyzeMarket(input: MarketInput): MarketData {
     }
   }
 
-  // Khuyến mãi đang chạy: giảm so với giá gốc, flash sale, quà tặng hoặc nhãn khuyến mãi
+  // Khuyến mãi đang chạy: giảm so với giá niêm yết, flash sale, quà tặng hoặc nhãn khuyến mãi
   const promotions: PromotionRow[] = input.current
     .filter(
       (v) =>

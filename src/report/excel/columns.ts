@@ -19,7 +19,7 @@ export function productColumns<T>(get: Getter<T, StoredProduct>, prefix = ''): C
 
 export function priceColumns<T>(get: Getter<T, PriceSnapshot>, prefix = ''): ColumnDef<T>[] {
   return [
-    { header: `${prefix}Giá gốc (niêm yết)`, width: 14, format: 'money', value: (r) => get(r).listPrice },
+    { header: `${prefix}Giá niêm yết`, width: 14, format: 'money', value: (r) => get(r).listPrice },
     { header: `${prefix}Giá bán hiện tại`, width: 14, format: 'money', value: (r) => get(r).price },
     { header: `${prefix}% giảm`, width: 9, format: 'percent', value: (r) => get(r).discountPercent },
     { header: `${prefix}Giá flash sale`, width: 14, format: 'money', value: (r) => get(r).flashPrice },
