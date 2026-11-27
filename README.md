@@ -104,7 +104,7 @@ npx wrangler secret put AUTH_PASSWORD    # mật khẩu web
 npm run cf:deploy
 ```
 
-Gói miễn phí của Cloudflare chỉ cho mỗi lần chạy rất ít thời gian xử lý, nên hệ thống lấy dữ liệu theo **từng trang** (50 sản phẩm một lần). Từ 7:25 sáng, mỗi phút lấy 1 trang, với 19 danh mục thường xong trong khoảng 8:10–8:40. File Excel được tạo ngay trên trình duyệt.
+Gói miễn phí của Cloudflare chỉ cho mỗi lần chạy rất ít thời gian xử lý, nên hệ thống lấy dữ liệu theo **từng trang** (50 sản phẩm một lần). Từ 7:25 sáng, mỗi phút lấy 1 trang, với 18 danh mục thường xong trong khoảng 8:10–8:40. File Excel được tạo ngay trên trình duyệt.
 
 </details>
 

@@ -24,7 +24,7 @@
 
   // Giờ UTC (= giờ VN − 7). Mỗi ngày tự lấy dữ liệu 1 lần, mỗi phút xử lý 1 trang:
   //   "25-59 0 * * *" = 7:25–7:59 sáng giờ VN: bắt đầu lượt cào (phải giống START_CRONS trong src/worker/index.ts)
-  //   "* 1 * * *"     = 8:00–8:59: làm tiếp nếu chưa xong (19 danh mục ≈ 60–80 trang)
+  //   "* 1 * * *"     = 8:00–8:59: làm tiếp nếu chưa xong (18 danh mục ≈ 60–80 trang)
   //   "*/10 2-23 * * *" = 10 phút một lần trong ngày: làm tiếp lượt dang dở (vd bấm "Lấy data hôm nay" rồi đóng trang)
   // Gói free cho tối đa 5 cron mỗi tài khoản.
   "triggers": {
