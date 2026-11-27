@@ -68,9 +68,36 @@
     return `<label class="chip ${cls}"><input type="checkbox" value="${escapeHtml(value)}" /><span>${escapeHtml(label)}${extra}</span></label>`;
   }
 
+  // Lựa chọn danh mục / thương hiệu được nhớ trong trình duyệt (lưu mỗi lần bấm "Tải file Excel")
+  const FILTER_KEY = 'mm.exportFilters';
+  function savedFilters() {
+    try {
+      const v = JSON.parse(localStorage.getItem(FILTER_KEY) || 'null');
+      return v && Array.isArray(v.categories) && Array.isArray(v.brands) ? v : null;
+    } catch {
+      return null;
+    }
+  }
+  function saveFilters(categories, brands) {
+    try {
+      localStorage.setItem(FILTER_KEY, JSON.stringify({ categories, brands }));
+    } catch {
+      /* trình duyệt chặn lưu trữ – bỏ qua */
+    }
+  }
+  const applyChecked = (container, values) => {
+    const set = new Set(values);
+    container.querySelectorAll('input').forEach((i) => (i.checked = set.has(i.value)));
+  };
+
+  let filtersRendered = false;
   async function loadOptions() {
     const o = (state.options = await (await api('/api/options')).json());
     const own = o.ownBrand.toLowerCase();
+    // Giữ lựa chọn đang có khi tải lại bộ lọc; lần đầu mở trang thì lấy lựa chọn đã lưu
+    const keep = filtersRendered
+      ? { categories: checkedValues($('#categories')), brands: checkedValues($('#brands')) }
+      : savedFilters();
 
     $('#categories').innerHTML = o.categories
       .map((c) => chip(c.slug, c.name, c.enabled === false ? ' <small>(ngừng)</small>' : '', c.enabled === false ? 'off' : ''))
@@ -81,6 +108,11 @@
           chip(b.brand, b.brand, ` <small>${b.productCount}</small>`, b.brand.toLowerCase() === own ? 'own' : ''),
         )
         .join('') || '<p class="note">Chưa có dữ liệu. Bấm "Lấy data hôm nay" trước.</p>';
+    if (keep) {
+      applyChecked($('#categories'), keep.categories);
+      applyChecked($('#brands'), keep.brands);
+    }
+    filtersRendered = true;
 
     $('#preview-category').innerHTML =
       '<option value="">Tất cả danh mục</option>' +
@@ -167,6 +199,7 @@
     }
     const cats = checkedValues($('#categories'));
     const brands = checkedValues($('#brands'));
+    saveFilters(cats, brands);
     if (cats.length) params.set('categories', cats.join(','));
     if (brands.length) params.set('brands', brands.join(','));
 
