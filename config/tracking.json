@@ -13,21 +13,47 @@
     "Kalite"
   ],
   "categories": [
-    { "slug": "chao-chong-dinh", "name": "Chảo" },
-    { "slug": "noi", "name": "Nồi" },
-    { "slug": "noi-ap-suat", "name": "Nồi áp suất" },
-    { "slug": "binh-ly-giu-nhiet", "name": "Bình, ly giữ nhiệt" },
-    { "slug": "hop-dung-thuc-pham", "name": "Hộp đựng thực phẩm" },
-    { "slug": "binh-dun-sieu-toc", "name": "Bình đun siêu tốc" },
-    { "slug": "binh-dung-nuoc", "name": "Bình đựng nước" },
-    { "slug": "dao-lam-bep", "name": "Dao làm bếp" },
-    { "slug": "thot", "name": "Thớt" }
+    {
+      "slug": "chao-chong-dinh",
+      "name": "Chảo"
+    },
+    {
+      "slug": "noi",
+      "name": "Nồi"
+    },
+    {
+      "slug": "noi-ap-suat",
+      "name": "Nồi áp suất"
+    },
+    {
+      "slug": "binh-ly-giu-nhiet",
+      "name": "Bình, ly giữ nhiệt"
+    },
+    {
+      "slug": "hop-dung-thuc-pham",
+      "name": "Hộp đựng thực phẩm"
+    },
+    {
+      "slug": "binh-dun-sieu-toc",
+      "name": "Bình đun siêu tốc"
+    },
+    {
+      "slug": "binh-dung-nuoc",
+      "name": "Bình đựng nước"
+    },
+    {
+      "slug": "dao-lam-bep",
+      "name": "Dao làm bếp"
+    },
+    {
+      "slug": "thot",
+      "name": "Thớt"
+    }
   ],
   "segment": {
-    "priceTolerancePercent": 30,
-    "maxCompetitorsPerProduct": 5,
-    "manualPairs": [
-      { "own": "EL-5753MN", "competitor": "SBDS28MT", "note": "Ví dụ: ghép tay chảo sâu 28cm" }
-    ]
+    "priceTolerancePercent": 20,
+    "maxCompetitorsPerProduct": 3,
+    "onlyListedCompetitors": false,
+    "manualPairs": []
   }
 }

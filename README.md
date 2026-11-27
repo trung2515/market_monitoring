@@ -4,7 +4,7 @@ Công cụ theo dõi giá và sản phẩm của Elmich và các đối thủ (S
 
 - Tự **cào dữ liệu hằng ngày** theo lịch: mã SP, giá niêm yết, giá bán, % giảm, giá flash sale, số đã bán, rating, thông số chính.
 - Giao diện web có nút **Xuất Excel theo tuần / tháng / khoảng tuỳ chọn**, lọc được theo danh mục và thương hiệu.
-- Báo cáo Excel gồm 7 sheet: Tổng quan · Bảng giá · Biến động giá · SP mới · Ngừng hiển thị · So sánh phân khúc · Lượt bán.
+- Báo cáo Excel gồm: Tổng quan · **1 sheet cho mỗi danh mục** (Elmich + đối thủ cùng tầm giá, và toàn bộ sản phẩm) · Biến động giá · SP mới · Ngừng hiển thị · Lượt bán.
 
 ---
 
@@ -52,13 +52,14 @@ Xem chú thích trong [.env.example](.env.example). Quan trọng:
 ```jsonc
 {
   "ownBrand": "Elmich",                         // thương hiệu của khách hàng
-  "competitorBrands": ["Sunhouse", "Lock&Lock"], // đối thủ chính (rỗng = mọi hãng khác)
+  "competitorBrands": ["Sunhouse", "Lock&Lock"], // đối thủ chính (dùng cho bộ lọc nhanh trên web)
   "categories": [                                // danh mục cần theo dõi
     { "slug": "chao-chong-dinh", "name": "Chảo" } // slug = phần đường dẫn trên dienmayxanh.com
   ],
   "segment": {
-    "priceTolerancePercent": 30,   // đối thủ có giá trong ±30% giá Elmich mới coi là cùng phân khúc
-    "maxCompetitorsPerProduct": 5,
+    "priceTolerancePercent": 20,   // đối thủ có giá bán trong ±20% giá Elmich = cùng tầm giá
+    "maxCompetitorsPerProduct": 3, // số đối thủ hiện cạnh mỗi sản phẩm Elmich
+    "onlyListedCompetitors": false, // true = chỉ so với competitorBrands
     "manualPairs": [               // ghép tay khi quy tắc tự động chưa đúng (theo mã model)
       { "own": "EL-5753MN", "competitor": "SBDS28MT", "note": "..." }
     ]
@@ -73,14 +74,19 @@ Xem chú thích trong [.env.example](.env.example). Quan trọng:
 | Sheet | Nội dung |
 |---|---|
 | **Tổng quan** | Theo danh mục × hãng: số SKU, giá TB/min/max, % giảm TB, số SKU flash sale, SKU mới/ngừng, số SKU tăng/giảm giá, lượt bán tăng thêm. Bên phải là thông tin kỳ và các cảnh báo dữ liệu |
-| **Bảng giá** | Toàn bộ SKU tại ngày cuối kỳ, có thông số và link |
+| **Mỗi danh mục 1 sheet** (Chảo, Nồi, Bình đun siêu tốc…) | **[1]** Mỗi dòng là 1 sản phẩm Elmich: mã, tên, kích thước, giá gốc, giá bán, % giảm, giá flash sale, đã bán. Bên phải là **3 đối thủ cùng tầm giá** (hãng, mã, tên, giá bán, flash sale, % chênh). **[2]** Toàn bộ sản phẩm của mọi hãng trong danh mục, sắp theo giá, có cột đổi giá trong kỳ / SP mới / link |
 | **Biến động giá** | SKU đổi giá giữa đầu kỳ và cuối kỳ: chênh lệch, %, giá min/max trong kỳ, số lần đổi giá |
 | **SP mới** | SKU lần đầu xuất hiện trong kỳ |
 | **Ngừng hiển thị** | SKU có ở đầu kỳ nhưng biến mất ở cuối kỳ (hết hàng, ngừng bán, bị ẩn) |
-| **So sánh phân khúc** | Mỗi SKU Elmich cùng các đối thủ cùng danh mục, cùng loại bộ/lẻ, cùng kích thước, giá gần nhất |
 | **Lượt bán** | Lượt bán tăng thêm (ước tính từ bộ đếm "đã bán" công khai) và doanh thu ước tính |
 
-Dòng của Elmich được tô vàng. Mọi sheet đều có freeze header và auto-filter.
+Dòng của Elmich được tô vàng. Ở bảng [1], dòng tô vàng là sản phẩm Elmich chưa tìm được đối thủ cùng tầm giá.
+
+**Cách chọn "đối thủ cùng tầm giá"** (chỉnh trong `config/tracking.json` → `segment`):
+- Giá bán của đối thủ chênh trong **±`priceTolerancePercent`%** (mặc định 20%) so với giá bán của Elmich, và cùng loại bộ/lẻ.
+- Trong số đó, ưu tiên sản phẩm **cùng kích thước/dung tích**, sau đó đến sản phẩm có giá gần nhất. Mỗi sản phẩm Elmich lấy tối đa `maxCompetitorsPerProduct` đối thủ (mặc định 3).
+- `onlyListedCompetitors: true` để chỉ so với các hãng trong `competitorBrands`. Mặc định là `false`, tức so với mọi hãng khác.
+- `manualPairs`: ghép tay theo mã model, ví dụ `{ "own": "EL-5753MN", "competitor": "SBDS28MT" }`. Cặp ghép tay luôn đứng đầu danh sách đối thủ.
 
 **Mốc so sánh "đầu kỳ"** là ngày có dữ liệu gần nhất *trước* ngày bắt đầu kỳ. Ví dụ báo cáo tuần 23–29/11 so dữ liệu ngày 22/11 (hoặc ngày gần nhất trước đó) với ngày có dữ liệu cuối cùng trong tuần. Nếu chưa có dữ liệu trước kỳ, hệ thống dùng ngày đầu tiên trong kỳ và ghi chú trong sheet Tổng quan.
 
@@ -123,9 +129,9 @@ Khi bấm xuất: `ReportService` → `analysis` → `excel/workbook` → tải 
 | Muốn… | Sửa ở đâu |
 |---|---|
 | Thêm/bớt danh mục, đối thủ | `config/tracking.json` |
-| Thêm/bớt cột trong Excel | mảng `columns` trong `src/report/excel/sheets/*.ts` |
+| Thêm/bớt cột trong Excel | mảng cột trong `src/report/excel/sheets/*.ts` (sheet danh mục: `categorySheets.ts`) |
 | Thêm sheet mới | viết hàm `addXxxSheet` rồi thêm vào mảng `SHEETS` trong `excel/workbook.ts` |
-| Đổi quy tắc ghép phân khúc / định nghĩa SP mới… | `src/report/analysis.ts` (+ test trong `tests/report.test.ts`) |
+| Đổi quy tắc chọn đối thủ cùng tầm giá / định nghĩa SP mới… | `src/report/analysis.ts` (`findCompetitors`, + test trong `tests/report.test.ts`) |
 | Trích mã model / kích thước sai | `src/utils/text.ts` (+ `tests/text.test.ts`) |
 | Thêm trường dữ liệu mới từ ĐMX | `crawler/dmx/schema.ts` → `normalize.ts` → `domain/types.ts` → thêm **migration mới** trong `db/migrations.ts` → repository |
 | Theo dõi thêm sàn khác (TGDĐ, Shopee…) | viết client + normalize mới trả về `CrawledProduct`; phần DB/báo cáo dùng lại được |

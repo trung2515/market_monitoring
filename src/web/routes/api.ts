@@ -111,7 +111,11 @@ export function apiRouter(ctx: AppContext): Router {
         if (keyword && !`${p.name} ${p.modelCode}`.toLowerCase().includes(keyword)) return [];
         return [{ ...p, ...s }];
       })
-      .sort((a, b) => a.categoryName.localeCompare(b.categoryName, 'vi') || a.brand.localeCompare(b.brand, 'vi'))
+      .sort(
+        (a, b) =>
+          a.categoryName.localeCompare(b.categoryName, 'vi') ||
+          (a.price ?? Number.MAX_SAFE_INTEGER) - (b.price ?? Number.MAX_SAFE_INTEGER),
+      )
       .slice(0, q.limit);
 
     res.json({ date, items });

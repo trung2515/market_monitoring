@@ -69,14 +69,17 @@
       <section class="card wide">
         <div class="preview-head">
           <h2>Xem nhanh bảng giá mới nhất <small id="preview-date"></small></h2>
-          <input id="search" type="search" placeholder="Tìm theo tên / mã model…" />
+          <div class="preview-filters">
+            <select id="preview-category"><option value="">Tất cả danh mục</option></select>
+            <input id="search" type="search" placeholder="Tìm theo tên / mã model…" />
+          </div>
         </div>
         <div class="table-wrap">
           <table class="preview">
             <thead>
               <tr>
                 <th>Danh mục</th><th>Hãng</th><th>Mã model</th><th>Tên sản phẩm</th>
-                <th class="num">Giá niêm yết</th><th class="num">Giá bán</th><th class="num">% giảm</th>
+                <th class="num">Giá gốc</th><th class="num">Giá bán</th><th class="num">% giảm</th>
                 <th class="num">Flash sale</th><th>Đã bán</th>
               </tr>
             </thead>

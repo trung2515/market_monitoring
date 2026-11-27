@@ -32,6 +32,9 @@
     $('#categories').innerHTML = options.categories
       .map((c) => `<label><input type="checkbox" value="${escapeHtml(c.slug)}" /> ${escapeHtml(c.name)}</label>`)
       .join('');
+    $('#preview-category').innerHTML =
+      '<option value="">Tất cả danh mục</option>' +
+      options.categories.map((c) => `<option value="${escapeHtml(c.slug)}">${escapeHtml(c.name)}</option>`).join('');
     const own = options.ownBrand.toLowerCase();
     $('#brands').innerHTML = options.brands
       .map(
@@ -160,11 +163,13 @@
   // ---------- Xem nhanh ----------
   let searchTimer;
   async function loadPreview() {
-    const params = new URLSearchParams({ limit: '300' });
+    const params = new URLSearchParams({ limit: '1000' });
     const q = $('#search').value.trim();
     if (q) params.set('q', q);
+    const cat = $('#preview-category').value;
+    if (cat) params.set('categories', cat);
     const data = await (await api(`/api/products?${params}`)).json();
-    $('#preview-date').textContent = data.date ? `(ngày ${data.date}, tối đa 300 dòng)` : '';
+    $('#preview-date').textContent = data.date ? `(ngày ${data.date}, ${data.items.length} sản phẩm)` : '';
     const own = options.ownBrand.toLowerCase();
     $('#preview').innerHTML = data.items
       .map(
@@ -177,6 +182,7 @@
       )
       .join('') || '<tr><td colspan="9">Chưa có dữ liệu</td></tr>';
   }
+  $('#preview-category').addEventListener('change', loadPreview);
   $('#search').addEventListener('input', () => {
     clearTimeout(searchTimer);
     searchTimer = setTimeout(loadPreview, 300);

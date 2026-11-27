@@ -22,9 +22,12 @@ const trackingSchema = z.object({
     .min(1),
   segment: z
     .object({
-      /** Giá đối thủ nằm trong ±x% giá Elmich thì coi là cùng phân khúc */
-      priceTolerancePercent: z.number().min(0).max(100).default(30),
-      maxCompetitorsPerProduct: z.number().int().min(1).max(50).default(5),
+      /** Giá đối thủ nằm trong ±x% giá Elmich thì coi là cùng tầm giá */
+      priceTolerancePercent: z.number().min(0).max(100).default(20),
+      /** Số đối thủ hiển thị cạnh mỗi sản phẩm của khách */
+      maxCompetitorsPerProduct: z.number().int().min(1).max(10).default(3),
+      /** true = chỉ so với các hãng trong competitorBrands; false = so với mọi hãng khác */
+      onlyListedCompetitors: z.boolean().default(false),
       /** Ghép tay theo mã model: luôn đưa vào báo cáo, bất kể quy tắc tự động */
       manualPairs: z
         .array(z.object({ own: z.string(), competitor: z.string(), note: z.string().optional() }))

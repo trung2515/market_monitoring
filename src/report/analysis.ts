@@ -33,13 +33,31 @@ export interface GoneProduct {
   lastSnapshot: PriceSnapshot;
 }
 
-export interface SegmentMatch {
-  own: ProductView;
-  competitor: ProductView | null;
+export interface CompetitorMatch {
+  competitor: ProductView;
+  /** Giá đối thủ − giá sản phẩm của khách */
   priceDiff: number | null;
   priceDiffPercent: number | null;
-  source: 'auto' | 'manual' | 'none';
+  /** Cùng kích thước / dung tích với sản phẩm của khách */
+  sameSize: boolean;
+  source: 'auto' | 'manual';
   note?: string;
+}
+
+/** 1 sản phẩm của khách (Elmich) kèm các đối thủ cùng tầm giá. */
+export interface OwnProductRow {
+  own: ProductView;
+  competitors: CompetitorMatch[];
+}
+
+/** Dữ liệu cho 1 sheet danh mục (vd "Bình đun siêu tốc"). */
+export interface CategoryReport {
+  slug: string;
+  name: string;
+  /** Sản phẩm của khách, sắp theo giá tăng dần */
+  ownRows: OwnProductRow[];
+  /** Toàn bộ sản phẩm (mọi hãng) trong danh mục, sắp theo giá tăng dần */
+  products: ProductView[];
 }
 
 export interface BrandSummaryRow {
@@ -69,9 +87,13 @@ export interface ReportData {
   newProducts: ProductView[];
   goneProducts: GoneProduct[];
   soldDeltas: SoldDelta[];
-  segments: SegmentMatch[];
+  categories: CategoryReport[];
   brandSummary: BrandSummaryRow[];
   ownBrand: string;
+  /** Ngưỡng ±% giá để coi là cùng tầm giá */
+  priceTolerancePercent: number;
+  /** Số đối thủ tối đa cạnh mỗi sản phẩm của khách */
+  maxCompetitors: number;
   notes: string[];
 }
 
@@ -86,6 +108,8 @@ export interface AnalysisInput {
   ownBrand: string;
   competitorBrands: string[];
   segment: TrackingConfig['segment'];
+  /** Thứ tự danh mục (slug) như trong config – dùng để sắp các sheet */
+  categoryOrder?: string[];
 }
 
 export function analyze(input: AnalysisInput): ReportData {
@@ -110,9 +134,11 @@ export function analyze(input: AnalysisInput): ReportData {
     newProducts: [],
     goneProducts: [],
     soldDeltas: [],
-    segments: [],
+    categories: [],
     brandSummary: [],
     ownBrand: input.ownBrand,
+    priceTolerancePercent: input.segment.priceTolerancePercent,
+    maxCompetitors: input.segment.maxCompetitorsPerProduct,
     notes,
   };
   if (!endDate) {
@@ -215,8 +241,8 @@ export function analyze(input: AnalysisInput): ReportData {
   }
   soldDeltas.sort((a, b) => b.delta - a.delta);
 
-  // ---- So sánh phân khúc ----
-  const segments = matchSegments(current, own, roleOf, input.segment);
+  // ---- Từng danh mục: SP của khách + đối thủ cùng tầm giá ----
+  const categories = buildCategoryReports(current, own, roleOf, input.segment, input.categoryOrder ?? []);
 
   // ---- Tổng hợp theo hãng ----
   const changeByCode = new Map(priceChanges.map((c) => [c.product.productCode, c]));
@@ -270,70 +296,104 @@ export function analyze(input: AnalysisInput): ReportData {
     newProducts,
     goneProducts,
     soldDeltas,
-    segments,
+    categories,
     brandSummary,
   };
 }
 
 /**
- * Ghép sản phẩm của khách (own) với sản phẩm đối thủ cùng phân khúc:
- * cùng danh mục, cùng là "bộ"/"lẻ", cùng kích thước (nếu xác định được), giá chênh trong ±x%.
+ * Chia sản phẩm cuối kỳ theo danh mục; với mỗi SP của khách tìm đối thủ cùng tầm giá.
  */
-export function matchSegments(
+export function buildCategoryReports(
   current: ProductView[],
   ownBrand: string,
   roleOf: (brand: string) => BrandSummaryRow['role'],
   config: TrackingConfig['segment'],
-): SegmentMatch[] {
-  const ownViews = current.filter((v) => normalizeBrand(v.product.brand) === ownBrand);
-  const rivals = current.filter((v) => roleOf(v.product.brand) === 'competitor');
-  const byModel = new Map(current.map((v) => [v.product.modelCode.toUpperCase(), v]));
-  const tolerance = config.priceTolerancePercent / 100;
-  const result: SegmentMatch[] = [];
-
-  for (const own of ownViews) {
-    const ownPrice = own.snapshot.price;
-    const rows: SegmentMatch[] = [];
-
-    for (const pair of config.manualPairs) {
-      if (pair.own.toUpperCase() !== own.product.modelCode.toUpperCase()) continue;
-      const competitor = byModel.get(pair.competitor.toUpperCase());
-      if (competitor) rows.push(makeMatch(own, competitor, 'manual', pair.note));
-    }
-
-    if (ownPrice != null) {
-      const auto = rivals
-        .filter(
-          (r) =>
-            r.product.categorySlug === own.product.categorySlug &&
-            r.product.isSet === own.product.isSet &&
-            (own.product.sizeKey == null || r.product.sizeKey === own.product.sizeKey) &&
-            r.snapshot.price != null &&
-            Math.abs(r.snapshot.price - ownPrice) <= ownPrice * tolerance &&
-            !rows.some((m) => m.competitor?.product.productCode === r.product.productCode),
-        )
-        .sort((a, b) => Math.abs((a.snapshot.price ?? 0) - ownPrice) - Math.abs((b.snapshot.price ?? 0) - ownPrice))
-        .slice(0, config.maxCompetitorsPerProduct);
-      rows.push(...auto.map((r) => makeMatch(own, r, 'auto')));
-    }
-
-    result.push(...(rows.length ? rows : [{ own, competitor: null, priceDiff: null, priceDiffPercent: null, source: 'none' as const }]));
+  categoryOrder: string[],
+): CategoryReport[] {
+  const groups = new Map<string, ProductView[]>();
+  for (const v of current) {
+    groups.set(v.product.categorySlug, [...(groups.get(v.product.categorySlug) ?? []), v]);
   }
-  return result;
+
+  const byModel = new Map(current.map((v) => [v.product.modelCode.toUpperCase(), v]));
+  const order = (slug: string) => {
+    const i = categoryOrder.indexOf(slug);
+    return i < 0 ? Number.MAX_SAFE_INTEGER : i;
+  };
+
+  return [...groups.entries()]
+    .map(([slug, views]) => {
+      const sorted = [...views].sort(byPrice);
+      const isOwn = (v: ProductView) => normalizeBrand(v.product.brand) === ownBrand;
+      const rivals = sorted.filter((v) => !isOwn(v) && (!config.onlyListedCompetitors || roleOf(v.product.brand) === 'competitor'));
+      const ownRows = sorted.filter(isOwn).map((own) => ({ own, competitors: findCompetitors(own, rivals, byModel, config) }));
+      return { slug, name: views[0]?.product.categoryName ?? slug, ownRows, products: sorted };
+    })
+    .sort((a, b) => order(a.slug) - order(b.slug) || a.name.localeCompare(b.name, 'vi'));
 }
 
-function makeMatch(own: ProductView, competitor: ProductView, source: 'auto' | 'manual', note?: string): SegmentMatch {
+/**
+ * Đối thủ cùng tầm giá của 1 sản phẩm:
+ *  1. Cặp ghép tay trong config (luôn đứng đầu)
+ *  2. Tự động: cùng loại bộ/lẻ, giá bán chênh trong ±x%; ưu tiên cùng kích thước, rồi giá gần nhất
+ */
+export function findCompetitors(
+  own: ProductView,
+  rivals: ProductView[],
+  byModel: Map<string, ProductView>,
+  config: TrackingConfig['segment'],
+): CompetitorMatch[] {
+  const result: CompetitorMatch[] = [];
+  const ownModel = own.product.modelCode.toUpperCase();
+
+  for (const pair of config.manualPairs) {
+    if (!ownModel || pair.own.toUpperCase() !== ownModel) continue;
+    const competitor = byModel.get(pair.competitor.toUpperCase());
+    if (competitor) result.push(makeMatch(own, competitor, 'manual', pair.note));
+  }
+
+  const ownPrice = own.snapshot.price;
+  if (ownPrice == null) return result.slice(0, config.maxCompetitorsPerProduct);
+
+  const tolerance = (config.priceTolerancePercent / 100) * ownPrice;
+  const taken = new Set(result.map((m) => m.competitor.product.productCode));
+  const auto = rivals
+    .filter(
+      (r) =>
+        !taken.has(r.product.productCode) &&
+        r.product.isSet === own.product.isSet &&
+        r.snapshot.price != null &&
+        Math.abs(r.snapshot.price - ownPrice) <= tolerance,
+    )
+    .map((r) => makeMatch(own, r, 'auto'))
+    .sort(
+      (a, b) =>
+        Number(b.sameSize) - Number(a.sameSize) || Math.abs(a.priceDiff ?? 0) - Math.abs(b.priceDiff ?? 0),
+    );
+
+  return [...result, ...auto].slice(0, config.maxCompetitorsPerProduct);
+}
+
+function makeMatch(own: ProductView, competitor: ProductView, source: 'auto' | 'manual', note?: string): CompetitorMatch {
   const op = own.snapshot.price;
   const cp = competitor.snapshot.price;
   const diff = op != null && cp != null ? cp - op : null;
   return {
-    own,
     competitor,
     priceDiff: diff,
     priceDiffPercent: diff != null && op ? round1((diff / op) * 100) : null,
+    sameSize: own.product.sizeKey != null && own.product.sizeKey === competitor.product.sizeKey,
     source,
     note,
   };
+}
+
+function byPrice(a: ProductView, b: ProductView): number {
+  return (
+    (a.snapshot.price ?? Number.MAX_SAFE_INTEGER) - (b.snapshot.price ?? Number.MAX_SAFE_INTEGER) ||
+    a.product.brand.localeCompare(b.product.brand, 'vi')
+  );
 }
 
 function countChanges(list: PriceSnapshot[]): number {

@@ -7,12 +7,13 @@ import { SnapshotRepository } from '../src/db/repositories/snapshotRepository';
 import type { PriceSnapshot, Product } from '../src/domain/types';
 import { ReportService } from '../src/report/reportService';
 
-const tracking = parseTrackingConfig({
-  ownBrand: 'Elmich',
-  competitorBrands: ['Sunhouse'],
-  categories: [{ slug: 'chao-chong-dinh', name: 'Chảo' }],
-  segment: { priceTolerancePercent: 30 },
-});
+const makeTracking = (segment: Record<string, unknown> = {}) =>
+  parseTrackingConfig({
+    ownBrand: 'Elmich',
+    competitorBrands: ['Sunhouse'],
+    categories: [{ slug: 'chao-chong-dinh', name: 'Chảo' }],
+    segment: { priceTolerancePercent: 30, ...segment },
+  });
 
 function product(code: string, brand: string, name: string, sizeKey = '28cm'): Product {
   return {
@@ -48,7 +49,7 @@ function snap(date: string, code: string, price: number, totalRate: number): Pri
   };
 }
 
-function setup() {
+function setup(segment: Record<string, unknown> = {}) {
   const db = openDatabase(':memory:');
   const products = new ProductRepository(db);
   const snapshots = new SnapshotRepository(db);
@@ -78,7 +79,7 @@ function setup() {
   save('2026-11-26', sunNew, 310000, 20);
   save('2026-11-26', tefal, 320000, 540);
 
-  const service = new ReportService({ products, snapshots, tracking, timeZone: 'Asia/Ho_Chi_Minh' });
+  const service = new ReportService({ products, snapshots, tracking: makeTracking(segment), timeZone: 'Asia/Ho_Chi_Minh' });
   return { db, service };
 }
 
@@ -108,10 +109,33 @@ describe('ReportService', () => {
     assert.equal(sold.E1, 50);
     assert.equal(sold.S3, 15); // SP mới: tính từ ngày đầu tiên xuất hiện
 
-    // Phân khúc: chỉ ghép với đối thủ trong competitorBrands (Sunhouse), cùng kích thước 28cm
-    const rivals = data.segments.map((s) => s.competitor?.product.productCode).sort();
-    assert.deepEqual(rivals, ['S1', 'S3']);
-    assert.ok(data.segments.every((s) => s.competitor?.product.brand === 'Sunhouse'));
+    // Sheet danh mục: Elmich + đối thủ cùng tầm giá (±30%), ưu tiên cùng kích thước rồi giá gần nhất
+    assert.equal(data.categories.length, 1);
+    const chao = data.categories[0];
+    assert.equal(chao?.name, 'Chảo');
+    assert.equal(chao?.products.length, 4);
+    assert.deepEqual(chao?.products.map((p) => p.product.productCode), ['S1', 'E1', 'S3', 'T1']); // theo giá
+    assert.equal(chao?.ownRows.length, 1);
+    assert.deepEqual(
+      chao?.ownRows[0]?.competitors.map((c) => c.competitor.product.productCode),
+      ['S3', 'S1', 'T1'],
+    );
+    assert.equal(chao?.ownRows[0]?.competitors[0]?.priceDiffPercent, 6.9); // (310 − 290) / 290
+  });
+
+  it('chỉ so với đối thủ trong danh sách khi bật onlyListedCompetitors', () => {
+    const { service } = setup({ onlyListedCompetitors: true });
+    const data = service.buildData({ type: 'week', date: '2026-11-26' });
+    assert.deepEqual(
+      data.categories[0]?.ownRows[0]?.competitors.map((c) => c.competitor.product.brand),
+      ['Sunhouse', 'Sunhouse'],
+    );
+  });
+
+  it('không lấy đối thủ ngoài tầm giá', () => {
+    const { service } = setup({ priceTolerancePercent: 5 });
+    const data = service.buildData({ type: 'week', date: '2026-11-26' });
+    assert.deepEqual(data.categories[0]?.ownRows[0]?.competitors.map((c) => c.competitor.product.productCode), []);
   });
 
   it('lọc theo thương hiệu', () => {
@@ -141,7 +165,7 @@ describe('ReportService', () => {
     const wb = buildWorkbook(service.buildData({ type: 'week', date: '2026-11-26' }));
     assert.deepEqual(
       wb.worksheets.map((w) => w.name),
-      ['Tổng quan', 'Bảng giá', 'Biến động giá', 'SP mới', 'Ngừng hiển thị', 'So sánh phân khúc', 'Lượt bán'],
+      ['Tổng quan', 'Chảo', 'Biến động giá', 'SP mới', 'Ngừng hiển thị', 'Lượt bán'],
     );
   });
 });

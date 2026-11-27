@@ -48,6 +48,7 @@ export class ReportService {
       ownBrand: tracking.ownBrand,
       competitorBrands: tracking.competitorBrands,
       segment: tracking.segment,
+      categoryOrder: tracking.categories.map((c) => c.slug),
     });
   }
 

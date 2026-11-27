@@ -71,5 +71,7 @@ tr.own td { background: var(--own); }
 
 .preview-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 .preview-head small { color: var(--muted); font-weight: 400; }
+.preview-filters { display: flex; gap: 8px; flex-wrap: wrap; }
+.preview-filters select { padding: 7px 9px; border: 1px solid var(--border); border-radius: 6px; font: inherit; }
 .table-wrap { max-height: 520px; overflow: auto; margin-top: 10px; }
 .preview a { color: var(--accent); text-decoration: none; }
