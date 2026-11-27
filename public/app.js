@@ -131,7 +131,7 @@
 
   // ---------- Trạng thái & cào ----------
   const STATUS_LABEL = { success: 'Thành công', partial: 'Một phần', failed: 'Lỗi', running: 'Đang chạy' };
-  const TRIGGER_LABEL = { schedule: 'Theo lịch', manual: 'Bấm tay', cli: 'Dòng lệnh' };
+  const TRIGGER_LABEL = { schedule: 'Theo lịch', manual: 'Thủ công', cli: 'Dòng lệnh' };
   let pollTimer = null;
 
   async function loadStatus() {
