@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { describe, it } from 'node:test';
 import { DmxApiError, DmxClient } from '../src/crawler/dmx/client';
-import { normalizeDmxProduct } from '../src/crawler/dmx/normalize';
+import { normalizeDmxProduct, pickPrices } from '../src/crawler/dmx/normalize';
 import { dmxProductSchema } from '../src/crawler/dmx/schema';
 import { silentLogger } from '../src/utils/logger';
 
@@ -116,5 +116,35 @@ describe('normalizeDmxProduct', () => {
     assert.equal(snapshot.flashPrice, null);
     assert.equal(snapshot.soldCount, 25200);
     assert.equal(product.modelCode, 'IN26M11');
+  });
+});
+
+describe('pickPrices – flash sale', () => {
+  const regular = { saleProgramTypeId: 0, price: 500000, sysPrice: 800000, startDate: '2026-11-01T00:00:00', endDate: '2026-11-30T23:59:59' };
+  const flash = (price: number, start: string, end: string) => ({ saleProgramTypeId: 1, price, startDate: start, endDate: end });
+  // Cào lúc 8:17 sáng 27/11 giờ VN
+  const now = new Date('2026-11-27T08:17:00+07:00');
+
+  it('ghi nhận flash sale bắt đầu muộn hơn trong ngày (12h–20h)', () => {
+    const p = pickPrices([regular, flash(299000, '2026-11-27T12:00:00', '2026-11-27T20:00:00')] as never, now);
+    assert.equal(p.flashPrice, 299000);
+    assert.equal(p.flashStart, '2026-11-27 12:00');
+    assert.equal(p.flashEnd, '2026-11-27 20:00');
+  });
+
+  it('không lấy flash sale của ngày mai hoặc đã kết thúc', () => {
+    const p = pickPrices(
+      [regular, flash(299000, '2026-11-28T12:00:00', '2026-11-28T20:00:00'), flash(250000, '2026-11-26T12:00:00', '2026-11-26T20:00:00')] as never,
+      now,
+    );
+    assert.equal(p.flashPrice, null);
+  });
+
+  it('ưu tiên flash sale đang chạy', () => {
+    const p = pickPrices(
+      [regular, flash(350000, '2026-11-27T00:00:00', '2026-11-27T10:00:00'), flash(299000, '2026-11-27T12:00:00', '2026-11-27T20:00:00')] as never,
+      now,
+    );
+    assert.equal(p.flashPrice, 350000);
   });
 });

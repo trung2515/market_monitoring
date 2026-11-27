@@ -11,10 +11,19 @@ function isActive(price: DmxPrice, now: Date): boolean {
   return (!start || start <= now) && (!end || now <= end);
 }
 
+const vnDay = (d: Date) => new Date(d.getTime() + 7 * 3600_000).toISOString().slice(0, 10);
+
+/** Chương trình bắt đầu muộn hơn trong CÙNG NGÀY (vd cào 8h, flash sale 12h–20h) – vẫn tính cho hôm nay. */
+function startsLaterToday(price: DmxPrice, now: Date): boolean {
+  const start = parseVnDateTime(price.startDate);
+  return Boolean(start && start > now && vnDay(start) === vnDay(now));
+}
+
 /**
  * Chọn giá:
  *  - Giá thường: mục có saleProgramTypeId = 0 (hoặc mục đầu tiên)
- *  - Giá flash sale: mục chương trình (saleProgramTypeId ≠ 0) đang hiệu lực tại thời điểm cào, lấy giá thấp nhất
+ *  - Giá flash sale: mục chương trình (saleProgramTypeId ≠ 0) đang hiệu lực tại thời điểm cào HOẶC sẽ bắt đầu
+ *    muộn hơn trong ngày (cào lúc 8h vẫn ghi nhận flash sale 12h–20h hôm đó); ưu tiên mục đang chạy, rồi giá thấp nhất
  */
 export function pickPrices(prices: DmxPrice[] | null | undefined, now: Date) {
   const list = prices ?? [];
@@ -25,12 +34,12 @@ export function pickPrices(prices: DmxPrice[] | null | undefined, now: Date) {
       (p) =>
         p !== regular &&
         (p.saleProgramTypeId ?? 0) !== 0 &&
-        isActive(p, now) &&
+        (isActive(p, now) || startsLaterToday(p, now)) &&
         typeof p.price === 'number' &&
         p.price > 0 &&
         (regular?.price == null || p.price < regular.price),
     )
-    .sort((a, b) => (a.price ?? 0) - (b.price ?? 0))[0];
+    .sort((a, b) => Number(isActive(b, now)) - Number(isActive(a, now)) || (a.price ?? 0) - (b.price ?? 0))[0];
 
   return {
     price: regular?.price ?? null,
